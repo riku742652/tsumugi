@@ -1,0 +1,10 @@
+{
+  "features": [
+    {
+      "id": "harness-setup",
+      "title": "Harness engineering scaffolding",
+      "status": "done",
+      "notes": "CLAUDE.md, copilot-instructions.md, init.sh, progress file"
+    }
+  ]
+}
