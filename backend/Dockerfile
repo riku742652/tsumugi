@@ -1,5 +1,8 @@
 FROM public.ecr.aws/lambda/python:3.12
 
+# Lambda Web Adapter — must be embedded in the image for package_type=Image
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

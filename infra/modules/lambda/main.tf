@@ -28,12 +28,6 @@ variable "cloudfront_domain" {
   default = ""
 }
 
-variable "lwa_layer_arn" {
-  type        = string
-  description = "Lambda Web Adapter layer ARN (AWS-published, region-specific)"
-  default     = "arn:aws:lambda:ap-northeast-1:753240598075:layer:LambdaAdapterLayerX86:24"
-}
-
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
@@ -115,9 +109,6 @@ resource "aws_lambda_function" "api" {
   image_uri     = var.image_uri
   timeout       = 30
   memory_size   = 512
-
-  # Lambda Web Adapter layer is published by AWS account 753240598075
-  layers = [var.lwa_layer_arn]
 
   environment {
     variables = {
