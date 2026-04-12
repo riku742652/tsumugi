@@ -4,17 +4,17 @@
 
 Zaim の CSV をアップロードして家計をグラフで可視化する Web アプリ。
 AWS 上に構築し、Cognito でログイン、DynamoDB にトランザクションを永続化する。
-フロントエンドは Vite + TypeScript、バックエンドは Lambda + API Gateway。
+フロントエンドは Vite + TypeScript、バックエンドは FastAPI + Lambda Web Adapter + Lambda Function URL。
 
 **スタック:**
 
 | レイヤー | 技術 |
 |---------|------|
 | フロント | Vite + TypeScript + Chart.js + PapaParse + aws-amplify |
-| API | AWS Lambda (Node.js 22) + API Gateway (HTTP API) |
-| 認証 | Amazon Cognito User Pools |
+| API | FastAPI (Python 3.12) + Lambda Web Adapter + Lambda Function URL |
+| 認証 | Amazon Cognito User Pools（JWT 検証は FastAPI ミドルウェア） |
 | DB | Amazon DynamoDB |
-| ストレージ | Amazon S3（生CSV + フロント配信） |
+| ストレージ | Amazon S3（フロント配信） |
 | CDN | CloudFront |
 | IaC | Terraform + Terragrunt |
 
@@ -34,19 +34,21 @@ tsumugi/
 │   │   └── main.ts
 │   ├── index.html
 │   └── package.json
-├── backend/           # Lambda functions
-│   ├── src/
-│   │   ├── handlers/
-│   │   │   ├── upload.ts       # CSV アップロード → DynamoDB
-│   │   │   └── transactions.ts # トランザクション取得
-│   │   └── types.ts
-│   └── package.json
+├── backend/           # FastAPI + Lambda Web Adapter
+│   ├── app/
+│   │   ├── main.py          # FastAPI アプリ + Lambda Web Adapter エントリ
+│   │   ├── auth.py          # Cognito JWT 検証ミドルウェア
+│   │   ├── routers/
+│   │   │   ├── upload.py    # POST /transactions
+│   │   │   └── transactions.py # GET /transactions
+│   │   └── models.py        # Pydantic モデル
+│   ├── requirements.txt
+│   └── Dockerfile           # Lambda コンテナイメージ用
 └── infra/             # Terraform + Terragrunt
     ├── modules/
     │   ├── cognito/    # User Pool + App Client
     │   ├── dynamodb/   # テーブル + GSI
-    │   ├── lambda/     # 関数 + IAM ロール
-    │   ├── api_gateway/ # HTTP API + JWT オーソライザー
+    │   ├── lambda/     # Function URL + Lambda Web Adapter レイヤー + IAM
     │   └── frontend/   # S3 + CloudFront
     └── envs/
         ├── terragrunt.hcl          # ルート設定（backend S3 など）
@@ -65,11 +67,10 @@ tsumugi/
 - **Change:** 以下のリソースを Terraform モジュールで定義し、Terragrunt で環境管理する
   - `modules/cognito` — User Pool + App Client
   - `modules/dynamodb` — テーブル `zaim-transactions`（PK: `userId`, SK: `txId`）、GSI: `userId-date-index`
-  - `modules/lambda` — 関数 × 2（upload, transactions）+ IAM ロール
-  - `modules/api_gateway` — HTTP API + Cognito JWT オーソライザー
+  - `modules/lambda` — Lambda Function URL（認証タイプ: NONE）+ Lambda Web Adapter レイヤー + IAM ロール（DynamoDB アクセス）
   - `modules/frontend` — S3 バケット + CloudFront ディストリビューション + OAC
   - ルート `terragrunt.hcl` で Terraform state を S3 + DynamoDB（state lock）に設定
-- **Why:** Terragrunt でモジュールの依存関係（`dependency` ブロック）を管理し、環境ごとの設定を DRY に保つ
+- **Why:** `modules/api_gateway` は不要（Function URL で代替）。Terragrunt の `dependency` ブロックで `cognito → lambda` の順序依存を管理する
 
 ---
 
@@ -133,26 +134,56 @@ tsumugi/
 
 ---
 
-### Task 4: バックエンド — upload Lambda
+### Task 4: バックエンド — FastAPI アプリ + JWT 認証ミドルウェア
 
-- **File(s):** `backend/src/handlers/upload.ts`
+- **File(s):** `backend/app/main.py`, `backend/app/auth.py`, `backend/app/models.py`
 - **Change:**
-  - リクエスト: `{ transactions: Transaction[] }`（JWT から `userId` を取得）
-  - DynamoDB の `batchWrite` で一括保存
-  - 同じ `txId` がある場合は上書き（冪等性）
-  - レスポンス: `{ saved: number }`
-- **Why:** CSV データをサーバーサイドで永続化する
+
+  `app/auth.py`:
+  ```python
+  # Cognito の JWKS エンドポイントから公開鍵を取得（起動時にキャッシュ）
+  # python-jose で Bearer トークンの署名・iss・exp を検証
+  # 検証成功 → user_id (Cognito sub) を返す
+  # 検証失敗 → 401 HTTPException
+  async def get_current_user(token: str = Depends(oauth2_scheme)) -> str
+  ```
+
+  `app/main.py`:
+  ```python
+  app = FastAPI()
+  # Lambda Web Adapter はポート 8080 でリッスンする Mangum 不要
+  # Dockerfile で AWS_LWA_PORT=8080 を設定
+  app.include_router(upload_router, prefix="/transactions")
+  app.include_router(transactions_router, prefix="/transactions")
+  ```
+
+  `app/models.py`: Pydantic で `Transaction` モデルを定義
+- **Why:** Lambda Web Adapter を使うことで FastAPI をそのまま Lambda で動かせる。Mangum 不要
 
 ---
 
-### Task 5: バックエンド — transactions Lambda
+### Task 5: バックエンド — upload / transactions ルーター
 
-- **File(s):** `backend/src/handlers/transactions.ts`
+- **File(s):** `backend/app/routers/upload.py`, `backend/app/routers/transactions.py`
 - **Change:**
-  - クエリパラメータ: `?from=2026-01&to=2026-03`（省略時は全件）
-  - DynamoDB の GSI `userId-date-index` でレンジクエリ
-  - レスポンス: `{ transactions: Transaction[] }`
-- **Why:** 保存済みデータをフロントに返す
+
+  `upload.py`:
+  ```python
+  POST /transactions
+  # Body: { transactions: list[Transaction] }
+  # Depends(get_current_user) で userId を取得
+  # DynamoDB batch_write_item で一括保存（同 txId は上書き）
+  # Response: { saved: int }
+  ```
+
+  `transactions.py`:
+  ```python
+  GET /transactions?from=2026-01&to=2026-03
+  # Depends(get_current_user) で userId を取得
+  # GSI userId-date-index でレンジクエリ（from/to 省略時は全件）
+  # Response: { transactions: list[Transaction] }
+  ```
+- **Why:** ルーターを分割して関心を分離する
 
 ---
 
@@ -245,6 +276,9 @@ tsumugi/
 - **Lambda vs ECS:** リクエスト頻度が低い家計アプリにはサーバーレスが適切。
 - **Amplify UI vs 自前ログイン画面:** Amplify UI は簡単だが見た目の自由度が低い。今回は `aws-amplify` のロジックだけ使い、UI は自前で実装する。
 - **CDK vs Terraform+Terragrunt:** CDK は TypeScript で書けるが Terraform エコシステムとの統一性がない。Terragrunt でモジュールを分割することで各リソースを独立して `plan` / `apply` できる。
+- **API Gateway vs Lambda Function URL:** Function URL は API Gateway より安価でシンプル。JWT 検証を FastAPI ミドルウェアで行うことで API Gateway の Cognito オーソライザーを代替できる。
+- **Function URL の認証タイプ NONE vs AWS_IAM:** AWS_IAM は SigV4 署名が必要でフロントが複雑になる。NONE + FastAPI JWT 検証で同等のセキュリティを実現できる。
+- **Mangum vs Lambda Web Adapter:** Lambda Web Adapter は AWS が提供するレイヤーで、FastAPI を変更なしに動かせる。Mangum は依存関係が増える。
 
 ---
 
