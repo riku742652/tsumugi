@@ -32,7 +32,7 @@ Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたは
 
   `src/types.ts`:
   ```typescript
-  export type TransactionType = 'payment' | 'income' | 'transfer';
+  export type TransactionType = 'payment' | 'income' | 'transfer' | 'balance';
 
   export interface ZaimRow {
     date: string;          // YYYY-MM-DD
@@ -62,6 +62,7 @@ Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたは
   export function parseZaimCsv(file: File): Promise<ZaimRow[]>
   // PapaParse で CSV をパース → ZaimRow[] に変換
   // 数値カラムは parseFloat（既に 0 が入っているため空文字対策は不要）
+  // type === 'balance' の行は常に除外（残高スナップショットのため）
   // aggregation === '集計に含めない' の行はデフォルトで除外
   // 除外フラグを引数で切り替えられるようにする
   ```
