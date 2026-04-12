@@ -5,6 +5,12 @@
       "title": "Harness engineering scaffolding",
       "status": "done",
       "notes": "AGENTS.md, .github/copilot-instructions.md, init.sh, progress file, subagents"
+    },
+    {
+      "id": "zaim-csv",
+      "title": "Zaim CSV visualization web app",
+      "status": "done",
+      "notes": "Vite+TS frontend, FastAPI+Lambda Web Adapter backend, Terraform+Terragrunt IaC, Cognito auth, DynamoDB, CloudFront"
     }
   ]
 }

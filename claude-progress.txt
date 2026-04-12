@@ -4,3 +4,21 @@ In Progress: (none)
 Blocked: (none)
 Next: Add first feature to features.json and begin Research phase
 Environment: No dependencies yet; run `bash init.sh` to verify state
+
+---
+
+Session: 2026-04-12
+Completed: zaim-csv feature (Tasks 1–9)
+  Task 1: IaC — Terraform modules (cognito, dynamodb, lambda, cloudfront) + Terragrunt envs/prod
+  Task 2: Shared types — frontend/src/types.ts + backend/app/models.py
+  Task 3: CSV parser — frontend/src/parser.ts (PapaParse, balance exclusion, aggregation filter)
+  Task 4: FastAPI app — backend/app/main.py + auth.py (X-Origin-Secret + Cognito JWT via python-jose)
+  Task 5: Routers — backend/app/routers/upload.py (POST) + transactions.py (GET with GSI range query)
+  Task 6: Auth — frontend/src/auth.ts (aws-amplify signIn/signOut/getCurrentUser/getIdToken)
+  Task 7: API client — frontend/src/api.ts (uploadTransactions, fetchTransactions)
+  Task 8: UI — frontend/index.html + src/main.ts + src/style.css (login, drag-drop, filters, responsive, dark mode)
+  Task 9: Charts — frontend/src/charts.ts (monthly expense bar, category doughnut, income vs expense stacked bar, category trend line)
+In Progress: (none)
+Blocked: (none)
+Next: Deploy infra with Terragrunt, build+push Docker image, deploy frontend to S3
+Environment: frontend needs `npm install`; backend needs Python 3.12 + pip install -r requirements.txt
