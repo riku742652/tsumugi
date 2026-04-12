@@ -67,10 +67,10 @@ Topic to implement: ${input:topic:e.g. user-authentication}
 9. For each comment that raises a concern or requests a change:
    a. Address it in the code (edit the relevant file, then `git add` and `git commit`).
    b. Push the fix: `git push`.
-   c. Reply to the comment with a mention and explanation:
+   c. Reply to the comment with a mention and explanation in **Japanese**:
       ```
       gh api repos/{owner}/{repo}/pulls/<number>/comments/<comment_id>/replies \
-        -f body="@<reviewer_login> <explanation of what was changed and why>"
+        -f body="@<reviewer_login> <変更内容と理由の説明（日本語）>"
       ```
 10. Repeat step 9 until all reviewer threads are addressed.
 
