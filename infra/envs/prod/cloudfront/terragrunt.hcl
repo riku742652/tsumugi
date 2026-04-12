@@ -7,7 +7,7 @@ terraform {
 }
 
 dependency "lambda" {
-  config_path                             = "../lambda"
+  config_path = "../lambda"
   mock_outputs_merge_strategy_with_state = "shallow"
   mock_outputs = {
     function_url        = "https://mock.lambda-url.ap-northeast-1.on.aws/"
