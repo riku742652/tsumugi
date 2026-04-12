@@ -48,8 +48,8 @@ tsumugi/
     ├── modules/
     │   ├── cognito/    # User Pool + App Client
     │   ├── dynamodb/   # テーブル + GSI
-    │   ├── lambda/     # Function URL + Lambda Web Adapter レイヤー + IAM
-    │   └── frontend/   # S3 + CloudFront
+    │   ├── lambda/     # Function URL（NONE）+ Lambda Web Adapter レイヤー + IAM
+    │   └── cloudfront/ # S3（フロント）+ Lambda Function URL（API）を統合する1ディストリビューション
     └── envs/
         ├── terragrunt.hcl          # ルート設定（backend S3 など）
         └── prod/
@@ -67,10 +67,12 @@ tsumugi/
 - **Change:** 以下のリソースを Terraform モジュールで定義し、Terragrunt で環境管理する
   - `modules/cognito` — User Pool + App Client
   - `modules/dynamodb` — テーブル `zaim-transactions`（PK: `userId`, SK: `txId`）、GSI: `userId-date-index`
-  - `modules/lambda` — Lambda Function URL（認証タイプ: NONE）+ Lambda Web Adapter レイヤー + IAM ロール（DynamoDB アクセス）
-  - `modules/frontend` — S3 バケット + CloudFront ディストリビューション + OAC
+  - `modules/lambda` — Function URL（認証タイプ: NONE）+ Lambda Web Adapter レイヤー + IAM（DynamoDB アクセス）+ Secrets Manager（X-Origin-Secret）
+  - `modules/cloudfront` — 1ディストリビューション、2オリジン:
+    - `/*` → S3（OAC）
+    - `/api/*` → Lambda Function URL（カスタムヘッダー `X-Origin-Secret` を付与）
   - ルート `terragrunt.hcl` で Terraform state を S3 + DynamoDB（state lock）に設定
-- **Why:** `modules/api_gateway` は不要（Function URL で代替）。Terragrunt の `dependency` ブロックで `cognito → lambda` の順序依存を管理する
+- **Why:** CloudFront を API の前段に置くことで Function URL を直接公開せず、DDoS 緩和・WAF 適用も可能になる。Terragrunt の `dependency` ブロックで `cognito → lambda → cloudfront` の順序を管理する
 
 ---
 
@@ -141,12 +143,18 @@ tsumugi/
 
   `app/auth.py`:
   ```python
-  # Cognito の JWKS エンドポイントから公開鍵を取得（起動時にキャッシュ）
-  # python-jose で Bearer トークンの署名・iss・exp を検証
-  # 検証成功 → user_id (Cognito sub) を返す
-  # 検証失敗 → 401 HTTPException
+  # 1. X-Origin-Secret ヘッダー検証（CloudFront 以外からのリクエストを 403 で拒否）
+  #    シークレットは起動時に Secrets Manager から取得してキャッシュ
+  def verify_origin_secret(x_origin_secret: str = Header(...)) -> None
+
+  # 2. Cognito JWT 検証
+  #    JWKS エンドポイントから公開鍵を取得（起動時にキャッシュ）
+  #    python-jose で Bearer トークンの署名・iss・exp を検証
+  #    検証成功 → user_id (Cognito sub) を返す / 失敗 → 401
   async def get_current_user(token: str = Depends(oauth2_scheme)) -> str
   ```
+
+  両 Depends を全ルーターに適用することで、CloudFront 経由かつ認証済みのリクエストのみを処理する。
 
   `app/main.py`:
   ```python
@@ -276,8 +284,8 @@ tsumugi/
 - **Lambda vs ECS:** リクエスト頻度が低い家計アプリにはサーバーレスが適切。
 - **Amplify UI vs 自前ログイン画面:** Amplify UI は簡単だが見た目の自由度が低い。今回は `aws-amplify` のロジックだけ使い、UI は自前で実装する。
 - **CDK vs Terraform+Terragrunt:** CDK は TypeScript で書けるが Terraform エコシステムとの統一性がない。Terragrunt でモジュールを分割することで各リソースを独立して `plan` / `apply` できる。
-- **API Gateway vs Lambda Function URL:** Function URL は API Gateway より安価でシンプル。JWT 検証を FastAPI ミドルウェアで行うことで API Gateway の Cognito オーソライザーを代替できる。
-- **Function URL の認証タイプ NONE vs AWS_IAM:** AWS_IAM は SigV4 署名が必要でフロントが複雑になる。NONE + FastAPI JWT 検証で同等のセキュリティを実現できる。
+- **API Gateway vs Lambda Function URL + CloudFront:** Function URL を CloudFront のオリジンにすることで API Gateway と同等のセキュリティを低コストで実現できる。
+- **Function URL の認証タイプ NONE + X-Origin-Secret:** AWS_IAM は SigV4 署名が必要でフロントが複雑になる。CloudFront がカスタムヘッダーを付与し FastAPI で検証することで Function URL への直接アクセスを拒否できる。
 - **Mangum vs Lambda Web Adapter:** Lambda Web Adapter は AWS が提供するレイヤーで、FastAPI を変更なしに動かせる。Mangum は依存関係が増える。
 
 ---
