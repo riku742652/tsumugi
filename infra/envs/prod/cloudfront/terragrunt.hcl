@@ -1,0 +1,21 @@
+include "root" {
+  path = find_in_parent_folders("terragrunt.hcl")
+}
+
+terraform {
+  source = "../../../modules/cloudfront"
+}
+
+dependency "lambda" {
+  config_path = "../lambda"
+  mock_outputs = {
+    function_url        = "https://mock.lambda-url.ap-northeast-1.on.aws/"
+    origin_secret_value = "mock-secret"
+  }
+}
+
+inputs = {
+  app_name            = "zaim-csv"
+  lambda_function_url = dependency.lambda.outputs.function_url
+  origin_secret_value = dependency.lambda.outputs.origin_secret_value
+}
