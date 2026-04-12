@@ -55,9 +55,9 @@ Topic to implement: ${input:topic:e.g. user-authentication}
 
 ## Review cycle
 
-7. Wait 90 seconds for Gemini Code Assist and GitHub Copilot to post their reviews:
+7. Wait for Gemini Code Assist and GitHub Copilot to post their reviews — two rounds of 90 seconds:
    ```
-   sleep 90
+   sleep 90 && sleep 90
    ```
 8. Fetch all review comments on the PR:
    ```
