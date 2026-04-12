@@ -43,7 +43,8 @@ resource "random_password" "origin_secret" {
 }
 
 resource "aws_secretsmanager_secret" "origin_secret" {
-  name = "${var.app_name}/origin-secret"
+  name                    = "${var.app_name}/origin-secret"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "origin_secret" {
@@ -138,6 +139,13 @@ resource "aws_lambda_function" "api" {
   image_uri     = var.image_uri
   timeout       = 30
   memory_size   = 512
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy.ecr,
+    aws_iam_role_policy.dynamodb,
+    aws_iam_role_policy.secrets,
+  ]
 
   environment {
     variables = {
