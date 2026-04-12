@@ -66,6 +66,8 @@ Once the plan is approved:
 - Maintain strict type checking throughout
 - Verify features end-to-end (browser/CLI/tests) before marking done
 - End every feature with a focused `git commit`
+- **Always work on a `feature/<topic>` or `fix/<topic>` branch — never commit directly to `main`**
+- Merge to `main` only via a pull request
 
 ---
 
