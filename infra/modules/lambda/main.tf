@@ -31,6 +31,11 @@ variable "cloudfront_domain" {
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 
+locals {
+  ecr_repo_name = split(":", split("/", var.image_uri)[1])[0]
+  ecr_repo_arn  = "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${local.ecr_repo_name}"
+}
+
 # Secrets Manager: X-Origin-Secret
 resource "random_password" "origin_secret" {
   length  = 32
@@ -63,6 +68,30 @@ resource "aws_iam_role" "lambda" {
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "ecr" {
+  name = "ecr-access"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+        ]
+        Resource = local.ecr_repo_arn
+      },
+    ]
+  })
 }
 
 resource "aws_iam_role_policy" "dynamodb" {
