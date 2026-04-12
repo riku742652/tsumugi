@@ -12,7 +12,7 @@ class Transaction(BaseModel):
     category: str
     subcategory: str
     shop: str
-    income: int
-    expense: int
-    transfer: int
+    income: float
+    expense: float
+    transfer: float
     aggregation: str

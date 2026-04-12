@@ -1,5 +1,5 @@
 import { Amplify } from 'aws-amplify';
-import { signIn, signOut, getCurrentUser, getIdToken } from './auth';
+import { signIn, signOut, getCurrentUser } from './auth';
 import { parseZaimCsv } from './parser';
 import { uploadTransactions, fetchTransactions } from './api';
 import {
@@ -85,6 +85,20 @@ logoutBtn.addEventListener('click', async () => {
 // ---------------------------------------------------------------------------
 // CSV upload
 // ---------------------------------------------------------------------------
+async function makeTxId(row: import('./types').ZaimRow): Promise<string> {
+  const raw = [
+    row.date, row.type, row.category, row.subcategory,
+    row.shop, row.item, row.memo,
+    String(row.income), String(row.expense), String(row.transfer),
+  ].join('|');
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  const hex = Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 16);
+  return `${row.date}#${hex}`;
+}
+
 async function handleFile(file: File): Promise<void> {
   setStatus('パース中…');
   try {
@@ -94,19 +108,21 @@ async function handleFile(file: File): Promise<void> {
     const user = await getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
-    const transactions: Transaction[] = rows.map((row) => ({
-      userId: user.userId,
-      txId: `${row.date}#${crypto.randomUUID()}`,
-      date: row.date,
-      type: row.type,
-      category: row.category,
-      subcategory: row.subcategory,
-      shop: row.shop,
-      income: row.income,
-      expense: row.expense,
-      transfer: row.transfer,
-      aggregation: row.aggregation,
-    }));
+    const transactions: Transaction[] = await Promise.all(
+      rows.map(async (row) => ({
+        userId: user.userId,
+        txId: await makeTxId(row),
+        date: row.date,
+        type: row.type,
+        category: row.category,
+        subcategory: row.subcategory,
+        shop: row.shop,
+        income: row.income,
+        expense: row.expense,
+        transfer: row.transfer,
+        aggregation: row.aggregation,
+      }))
+    );
 
     setStatus('アップロード中…');
     const result = await uploadTransactions(transactions);

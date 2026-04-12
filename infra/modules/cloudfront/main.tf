@@ -137,13 +137,8 @@ resource "aws_cloudfront_distribution" "main" {
     cloudfront_default_certificate = true
   }
 
-  # SPA fallback: serve index.html for 403/404
-  custom_error_response {
-    error_code         = 403
-    response_code      = 200
-    response_page_path = "/index.html"
-  }
-
+  # SPA fallback: serve index.html for S3 404 (missing routes).
+  # 403 is intentionally omitted — API errors must not be rewritten to 200.
   custom_error_response {
     error_code         = 404
     response_code      = 200

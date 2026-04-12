@@ -19,9 +19,19 @@ variable "cognito_issuer" {
   type = string
 }
 
+variable "cognito_client_id" {
+  type = string
+}
+
 variable "cloudfront_domain" {
   type    = string
   default = ""
+}
+
+variable "lwa_layer_arn" {
+  type        = string
+  description = "Lambda Web Adapter layer ARN (AWS-published, region-specific)"
+  default     = "arn:aws:lambda:ap-northeast-1:753240598075:layer:LambdaAdapterLayerX86:24"
 }
 
 data "aws_region" "current" {}
@@ -97,13 +107,6 @@ resource "aws_iam_role_policy" "secrets" {
   })
 }
 
-# Lambda Web Adapter layer (public layer provided by AWS)
-data "aws_lambda_layer_version" "lwa" {
-  layer_name = "LambdaAdapterLayerX86"
-  # AWS account that publishes the layer
-  layer_arn = "arn:aws:lambda:${data.aws_region.current.name}:753240598075:layer:LambdaAdapterLayerX86"
-}
-
 # Lambda function
 resource "aws_lambda_function" "api" {
   function_name = "${var.app_name}-api"
@@ -113,15 +116,17 @@ resource "aws_lambda_function" "api" {
   timeout       = 30
   memory_size   = 512
 
-  layers = [data.aws_lambda_layer_version.lwa.arn]
+  # Lambda Web Adapter layer is published by AWS account 753240598075
+  layers = [var.lwa_layer_arn]
 
   environment {
     variables = {
-      AWS_LWA_PORT            = "8080"
-      DYNAMODB_TABLE          = var.dynamodb_table_name
-      COGNITO_ISSUER          = var.cognito_issuer
-      ORIGIN_SECRET_ARN       = aws_secretsmanager_secret.origin_secret.arn
-      CLOUDFRONT_DOMAIN       = var.cloudfront_domain
+      AWS_LWA_PORT      = "8080"
+      DYNAMODB_TABLE    = var.dynamodb_table_name
+      COGNITO_ISSUER    = var.cognito_issuer
+      COGNITO_CLIENT_ID = var.cognito_client_id
+      ORIGIN_SECRET_ARN = aws_secretsmanager_secret.origin_secret.arn
+      CLOUDFRONT_DOMAIN = var.cloudfront_domain
     }
   }
 }

@@ -9,7 +9,8 @@ terraform {
 dependency "cognito" {
   config_path = "../cognito"
   mock_outputs = {
-    issuer = "https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_mock"
+    issuer    = "https://cognito-idp.ap-northeast-1.amazonaws.com/ap-northeast-1_mock"
+    client_id = "mockclientid"
   }
 }
 
@@ -27,4 +28,5 @@ inputs = {
   dynamodb_table_arn  = dependency.dynamodb.outputs.table_arn
   dynamodb_table_name = dependency.dynamodb.outputs.table_name
   cognito_issuer      = dependency.cognito.outputs.issuer
+  cognito_client_id   = dependency.cognito.outputs.client_id
 }

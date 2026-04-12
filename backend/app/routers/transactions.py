@@ -10,6 +10,8 @@ from ..auth import get_current_user, verify_origin_secret
 
 router = APIRouter(dependencies=[Depends(verify_origin_secret)])
 
+_dynamodb = boto3.resource("dynamodb")
+
 
 class TransactionsResponse(BaseModel):
     transactions: list[Transaction]
@@ -21,9 +23,7 @@ async def get_transactions(
     from_date: Optional[str] = Query(None, alias="from"),
     to_date: Optional[str] = Query(None, alias="to"),
 ) -> TransactionsResponse:
-    table_name = os.environ["DYNAMODB_TABLE"]
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(table_name)
+    table = _dynamodb.Table(os.environ["DYNAMODB_TABLE"])
 
     key_condition = Key("userId").eq(user_id)
 
