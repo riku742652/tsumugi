@@ -32,7 +32,7 @@ Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたは
 
   `src/types.ts`:
   ```typescript
-  export type TransactionType = '支出' | '収入' | '振替';
+  export type TransactionType = 'payment' | 'income' | 'transfer';
 
   export interface ZaimRow {
     date: string;          // YYYY-MM-DD
@@ -48,6 +48,9 @@ Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたは
     income: number;
     expense: number;
     transfer: number;
+    balanceAdjustment: number;
+    originalAmount: number;
+    aggregation: string;   // '集計に含めない' の行はグラフから除外
   }
   ```
 
@@ -58,7 +61,9 @@ Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたは
 
   export function parseZaimCsv(file: File): Promise<ZaimRow[]>
   // PapaParse で CSV をパース → ZaimRow[] に変換
-  // 数値カラムは parseFloat、空文字は 0 に変換
+  // 数値カラムは parseFloat（既に 0 が入っているため空文字対策は不要）
+  // aggregation === '集計に含めない' の行はデフォルトで除外
+  // 除外フラグを引数で切り替えられるようにする
   ```
 - **Why:** CSV の生データを型付きオブジェクトに変換するレイヤーを分離する
 
