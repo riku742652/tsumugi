@@ -2,40 +2,80 @@
 
 ## Overview
 
-Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたはファイル選択して読み込み、
-月別支出推移・カテゴリ内訳・収支バランスをインタラクティブに可視化する静的 Web アプリ。
-全データはブラウザ内のみで処理し、外部サーバーには送信しない。
+Zaim の CSV をアップロードして家計をグラフで可視化する Web アプリ。
+AWS 上に構築し、Cognito でログイン、DynamoDB にトランザクションを永続化する。
+フロントエンドは Vite + TypeScript、バックエンドは Lambda + API Gateway。
 
-**スタック:** Vite + TypeScript + Chart.js + PapaParse
+**スタック:**
+
+| レイヤー | 技術 |
+|---------|------|
+| フロント | Vite + TypeScript + Chart.js + PapaParse + aws-amplify |
+| API | AWS Lambda (Node.js 22) + API Gateway (HTTP API) |
+| 認証 | Amazon Cognito User Pools |
+| DB | Amazon DynamoDB |
+| ストレージ | Amazon S3（生CSV + フロント配信） |
+| CDN | CloudFront |
+| IaC | AWS CDK (TypeScript) |
+
+---
+
+## ディレクトリ構成
+
+```
+tsumugi/
+├── frontend/          # Vite + TypeScript
+│   ├── src/
+│   │   ├── types.ts
+│   │   ├── parser.ts
+│   │   ├── api.ts
+│   │   ├── auth.ts
+│   │   ├── charts.ts
+│   │   └── main.ts
+│   ├── index.html
+│   └── package.json
+├── backend/           # Lambda functions
+│   ├── src/
+│   │   ├── handlers/
+│   │   │   ├── upload.ts     # CSV アップロード → DynamoDB
+│   │   │   └── transactions.ts # トランザクション取得
+│   │   └── types.ts
+│   └── package.json
+└── infra/             # AWS CDK
+    ├── lib/
+    │   └── zaim-stack.ts
+    └── package.json
+```
 
 ---
 
 ## Tasks
 
-### Task 1: プロジェクト初期化
+### Task 1: IaC（CDK）— AWS リソース定義
 
-- **File(s):** `package.json`, `vite.config.ts`, `tsconfig.json`, `index.html`
-- **Change:**
-  ```
-  npm create vite@latest . -- --template vanilla-ts
-  npm install chart.js papaparse
-  npm install -D @types/papaparse
-  ```
-- **Why:** Vite + TypeScript のボイラープレートを生成し、依存関係を追加する
+- **File(s):** `infra/lib/zaim-stack.ts`
+- **Change:** 以下のリソースを CDK で定義する
+  - Cognito User Pool + App Client
+  - DynamoDB テーブル `zaim-transactions`（PK: `userId`, SK: `txId`）
+    - GSI: `userId-date-index`（PK: `userId`, SK: `date`）
+  - S3 バケット（生CSV保存用）
+  - Lambda 関数 × 2（upload, transactions）
+  - API Gateway HTTP API（Cognito JWT オーソライザー付き）
+  - S3 バケット（フロント配信用）+ CloudFront ディストリビューション
+- **Why:** インフラをコードで管理し再現性を確保する
 
 ---
 
-### Task 2: Zaim CSV の型定義とパーサー
+### Task 2: 共通型定義
 
-- **File(s):** `src/types.ts`, `src/parser.ts`
+- **File(s):** `frontend/src/types.ts`, `backend/src/types.ts`
 - **Change:**
 
-  `src/types.ts`:
   ```typescript
   export type TransactionType = 'payment' | 'income' | 'transfer' | 'balance';
 
   export interface ZaimRow {
-    date: string;          // YYYY-MM-DD
+    date: string;
     type: TransactionType;
     category: string;
     subcategory: string;
@@ -50,122 +90,159 @@ Zaim の CSV ファイルをブラウザ上でドラッグ&ドロップまたは
     transfer: number;
     balanceAdjustment: number;
     originalAmount: number;
-    aggregation: string;   // '集計に含めない' の行はグラフから除外
+    aggregation: string;
+  }
+
+  // DB に保存する形式（フロント↔バックエンド共通）
+  export interface Transaction {
+    userId: string;
+    txId: string;      // {date}#{uuid}
+    date: string;
+    type: TransactionType;
+    category: string;
+    subcategory: string;
+    shop: string;
+    income: number;
+    expense: number;
+    transfer: number;
+    aggregation: string;
   }
   ```
+- **Why:** フロントとバックエンドで型を共有してズレを防ぐ
 
-  `src/parser.ts`:
+---
+
+### Task 3: フロント — CSV パーサー
+
+- **File(s):** `frontend/src/parser.ts`
+- **Change:**
   ```typescript
-  import Papa from 'papaparse';
-  import type { ZaimRow } from './types';
-
   export function parseZaimCsv(file: File): Promise<ZaimRow[]>
-  // PapaParse で CSV をパース → ZaimRow[] に変換
-  // 数値カラムは parseFloat（既に 0 が入っているため空文字対策は不要）
-  // type === 'balance' の行は常に除外（残高スナップショットのため）
-  // aggregation === '集計に含めない' の行はデフォルトで除外
-  // 除外フラグを引数で切り替えられるようにする
+  // PapaParse でパース → ZaimRow[] に変換
+  // type === 'balance' は常に除外
+  // aggregation === '集計に含めない' はオプション引数で除外可（デフォルト: 除外）
   ```
-- **Why:** CSV の生データを型付きオブジェクトに変換するレイヤーを分離する
+- **Why:** CSV → 型付きオブジェクトへの変換を分離する
 
 ---
 
-### Task 3: 集計ロジック
+### Task 4: バックエンド — upload Lambda
 
-- **File(s):** `src/aggregator.ts`
+- **File(s):** `backend/src/handlers/upload.ts`
+- **Change:**
+  - リクエスト: `{ transactions: Transaction[] }`（JWT から `userId` を取得）
+  - DynamoDB の `batchWrite` で一括保存
+  - 同じ `txId` がある場合は上書き（冪等性）
+  - レスポンス: `{ saved: number }`
+- **Why:** CSV データをサーバーサイドで永続化する
+
+---
+
+### Task 5: バックエンド — transactions Lambda
+
+- **File(s):** `backend/src/handlers/transactions.ts`
+- **Change:**
+  - クエリパラメータ: `?from=2026-01&to=2026-03`（省略時は全件）
+  - DynamoDB の GSI `userId-date-index` でレンジクエリ
+  - レスポンス: `{ transactions: Transaction[] }`
+- **Why:** 保存済みデータをフロントに返す
+
+---
+
+### Task 6: フロント — 認証（Cognito）
+
+- **File(s):** `frontend/src/auth.ts`
 - **Change:**
   ```typescript
-  // 月別支出合計: { '2024-03': 45000, '2024-04': 38000, ... }
-  export function sumByMonth(rows: ZaimRow[]): Record<string, number>
-
-  // カテゴリ別支出合計（指定月）: { '食費': 12000, '交通費': 5000, ... }
-  export function sumByCategory(rows: ZaimRow[], month: string): Record<string, number>
-
-  // 月別収支: { '2024-03': { income: 280000, expense: 120000 }, ... }
-  export function incomeVsExpense(rows: ZaimRow[]): Record<string, { income: number; expense: number }>
+  // aws-amplify を使って Cognito と連携
+  export function signIn(email: string, password: string): Promise<void>
+  export function signOut(): Promise<void>
+  export function getCurrentUser(): Promise<{ userId: string; email: string } | null>
+  export function getIdToken(): Promise<string>  // API リクエストに付与
   ```
-- **Why:** 描画ロジックから集計ロジックを分離してテストしやすくする
+- **Why:** ログイン・ログアウト・トークン取得を1箇所にまとめる
 
 ---
 
-### Task 4: UI — ファイル取り込みエリア
+### Task 7: フロント — API クライアント
 
-- **File(s):** `src/main.ts`, `src/style.css`, `index.html`
+- **File(s):** `frontend/src/api.ts`
 - **Change:**
-  - ドラッグ&ドロップ + `<input type="file">` でCSVを受け取る
-  - 読み込み中はスピナーを表示
-  - 複数ファイルを選択した場合は全て結合して処理
-  - ファイル名・件数をヘッダーに表示
-- **Why:** ユーザーが CSV を操作する唯一の入口
-
----
-
-### Task 5: グラフ描画
-
-- **File(s):** `src/charts.ts`
-- **Change:**
-
-  以下の4チャートを Chart.js で描画。各関数は `canvas` 要素と集計データを受け取る。
-
   ```typescript
-  // ① 月別支出合計（棒グラフ）
-  export function renderMonthlyExpense(canvas: HTMLCanvasElement, data: Record<string, number>): void
-
-  // ② カテゴリ別内訳（ドーナツグラフ）
-  export function renderCategoryBreakdown(canvas: HTMLCanvasElement, data: Record<string, number>): void
-
-  // ③ 収入 vs 支出（積み上げ棒グラフ）
-  export function renderIncomeVsExpense(canvas: HTMLCanvasElement, data: Record<string, { income: number; expense: number }>): void
-
-  // ④ カテゴリ別月次推移（折れ線グラフ、上位5カテゴリ）
-  export function renderCategoryTrend(canvas: HTMLCanvasElement, rows: ZaimRow[]): void
+  export async function uploadTransactions(rows: Transaction[]): Promise<{ saved: number }>
+  export async function fetchTransactions(from?: string, to?: string): Promise<Transaction[]>
+  // 各関数は getIdToken() で JWT を取得して Authorization ヘッダーに付与
   ```
-- **Why:** グラフ種別ごとに関数を分けて差し替えやすくする
+- **Why:** API 通信を1ファイルに集約し、認証ヘッダー付与を統一する
 
 ---
 
-### Task 6: 月フィルター UI
+### Task 8: フロント — UI（ファイル取り込み + グラフ）
 
-- **File(s):** `src/main.ts`, `index.html`
+- **File(s):** `frontend/src/main.ts`, `frontend/index.html`, `frontend/src/style.css`
 - **Change:**
-  - データ読み込み後、存在する月の一覧を `<select>` に表示
-  - 月を変更するたびにカテゴリ内訳グラフ（Task 5 ②）を再描画
-- **Why:** カテゴリ内訳は月単位で見るのが自然なため
+  - ログイン画面: メール・パスワード入力 → `signIn()`
+  - メイン画面:
+    - ドラッグ&ドロップ / ファイル選択で CSV 取り込み → `parseZaimCsv()` → `uploadTransactions()`
+    - ページ読み込み時に `fetchTransactions()` で保存済みデータ取得
+    - 月フィルター `<select>` で期間を絞り込み
+    - 集計の設定フィルター（「集計外を含む」トグル）
+  - レスポンシブ、ダークモード対応
+- **Why:** ユーザーが操作する唯一の画面
 
 ---
 
-### Task 7: スタイリング
+### Task 9: フロント — グラフ描画
 
-- **File(s):** `src/style.css`
+- **File(s):** `frontend/src/charts.ts`
 - **Change:**
-  - ダークモード対応のシンプルな2カラムレイアウト
-  - グラフカード: 白背景、角丸、shadow
-  - ドロップゾーン: dashed border、hover でハイライト
-  - レスポンシブ（モバイルでは1カラム）
-- **Why:** 実用的に使えるデザインにする
+  ```typescript
+  export function renderMonthlyExpense(canvas: HTMLCanvasElement, data: Transaction[]): void    // ① 月別支出（棒）
+  export function renderCategoryBreakdown(canvas: HTMLCanvasElement, data: Transaction[]): void // ② カテゴリ内訳（ドーナツ）
+  export function renderIncomeVsExpense(canvas: HTMLCanvasElement, data: Transaction[]): void   // ③ 収支（積み上げ棒）
+  export function renderCategoryTrend(canvas: HTMLCanvasElement, data: Transaction[]): void     // ④ カテゴリ推移（折れ線）
+  // 集計ロジックは各関数内で Transaction[] から計算する
+  ```
+- **Why:** グラフ種別ごとに関数を分離して差し替えやすくする
 
 ---
 
 ## Task Order
 
-1 → 2 → 3 → 4 → 5 → 6 → 7
-
-Task 2 と 3 は依存なしなので並行可能。
-Task 4 は Task 2 完了後。Task 5 は Task 3 完了後。
+```
+1 (CDK)
+  ↓
+2 (型定義)
+  ↓
+┌─────────────────┐
+│ 3 (parser)      │  ← フロント系
+│ 4 (upload λ)   │  ← バックエンド系（並行可）
+│ 5 (fetch λ)    │
+└────────┬────────┘
+         ↓
+┌─────────────────┐
+│ 6 (auth)        │
+│ 7 (api client)  │  ← 並行可
+└────────┬────────┘
+         ↓
+         8 (UI)
+         ↓
+         9 (charts)
+```
 
 ---
 
 ## Trade-offs & Alternatives
 
-- **素の HTML vs Vite+TS:** TS を選択。ZaimRow の型が CSV のカラムと合っているかをコンパイル時に検証できる。
-- **Chart.js vs D3.js:** Chart.js を選択。D3 は自由度が高いが今回の用途には過剰。
-- **状態管理ライブラリ:** 使わない。データフローが「CSVロード → 集計 → 描画」の一方向なため不要。
+- **DynamoDB vs RDS:** 集計はすべて Lambda またはフロントで行うため、RDB の JOIN は不要。DynamoDB の方がサーバーレスとの相性が良くコストも低い。
+- **Lambda vs ECS:** リクエスト頻度が低い家計アプリにはサーバーレスが適切。
+- **Amplify UI vs 自前ログイン画面:** Amplify UI は簡単だが見た目の自由度が低い。今回は `aws-amplify` のロジックだけ使い、UI は自前で実装する。
 
 ---
 
 ## Out of Scope
 
-- サーバーサイド処理・データ保存（IndexedDB 等）
 - Zaim API 連携（手動 CSV 取り込みのみ）
+- 複数ユーザー間のデータ共有
 - カテゴリ編集・トランザクション一覧表示
-- PWA 化・オフライン対応
+- CI/CD パイプライン
