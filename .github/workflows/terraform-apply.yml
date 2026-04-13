@@ -92,6 +92,7 @@ jobs:
 
       - name: Build and push Docker image
         if: inputs.module == 'all'
+        working-directory: ${{ github.workspace }}
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
