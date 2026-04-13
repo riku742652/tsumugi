@@ -22,3 +22,17 @@ In Progress: (none)
 Blocked: (none)
 Next: Deploy infra with Terragrunt, build+push Docker image, deploy frontend to S3
 Environment: frontend needs `npm install`; backend needs Python 3.12 + pip install -r requirements.txt
+
+---
+
+Session: 2026-04-12
+Completed: ecr feature (Tasks 1–5)
+  Task 1: New infra/modules/ecr/main.tf — aws_ecr_repository resource, outputs repository_url + repository_arn
+  Task 2: New infra/envs/prod/ecr/terragrunt.hcl — no dependencies, inputs app_name/repo_name
+  Task 3: infra/modules/lambda/main.tf — removed locals block + data sources, added variable ecr_repository_arn, replaced local.ecr_repo_arn with var.ecr_repository_arn
+  Task 4: infra/envs/prod/lambda/terragrunt.hcl — removed run_cmd locals, added dependency "ecr" with mock_outputs, derived image_uri and ecr_repository_arn from ECR outputs
+  Task 5: .github/workflows/terraform-apply.yml — added ecr to module choices, split all-deploy into 3 stages (Group 1 apply, ECR login+push, Group 2+3 apply)
+In Progress: (none)
+Blocked: (none)
+Next: Run terraform-apply with module=all for first-time ECR bootstrap deployment
+Environment: AWS_DEPLOY_ROLE_ARN secret must have ecr:GetAuthorizationToken + ecr:BatchGetImage + ecr:PutImage permissions

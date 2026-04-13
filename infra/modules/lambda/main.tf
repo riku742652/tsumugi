@@ -23,13 +23,15 @@ variable "cognito_client_id" {
   type = string
 }
 
+variable "ecr_repository_arn" {
+  type        = string
+  description = "ARN of the ECR repository that holds the Lambda container image"
+}
+
 variable "cloudfront_domain" {
   type    = string
   default = ""
 }
-
-data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}
 
 # Secrets Manager: X-Origin-Secret
 resource "random_password" "origin_secret" {
@@ -38,7 +40,8 @@ resource "random_password" "origin_secret" {
 }
 
 resource "aws_secretsmanager_secret" "origin_secret" {
-  name = "${var.app_name}/origin-secret"
+  name                    = "${var.app_name}/origin-secret"
+  recovery_window_in_days = 0
 }
 
 resource "aws_secretsmanager_secret_version" "origin_secret" {
@@ -63,6 +66,30 @@ resource "aws_iam_role" "lambda" {
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy" "ecr" {
+  name = "ecr-access"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+        ]
+        Resource = var.ecr_repository_arn
+      },
+    ]
+  })
 }
 
 resource "aws_iam_role_policy" "dynamodb" {
@@ -109,6 +136,13 @@ resource "aws_lambda_function" "api" {
   image_uri     = var.image_uri
   timeout       = 30
   memory_size   = 512
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy.ecr,
+    aws_iam_role_policy.dynamodb,
+    aws_iam_role_policy.secrets,
+  ]
 
   environment {
     variables = {

@@ -12,5 +12,11 @@
       "status": "done",
       "notes": "Vite+TS frontend, FastAPI+Lambda Web Adapter backend, Terraform+Terragrunt IaC, Cognito auth, DynamoDB, CloudFront"
     }
-  ]
+  ],
+  "ecr": {
+    "id": "ecr",
+    "title": "ECR repository as first-class Terraform/Terragrunt resource",
+    "status": "done",
+    "notes": "New ECR module + env config, Lambda module refactored to accept ecr_repository_arn variable, terraform-apply.yml updated with 3-stage all-deploy"
+  }
 }
