@@ -23,17 +23,14 @@ variable "cognito_client_id" {
   type = string
 }
 
+variable "ecr_repository_arn" {
+  type        = string
+  description = "ARN of the ECR repository that holds the Lambda container image"
+}
+
 variable "cloudfront_domain" {
   type    = string
   default = ""
-}
-
-data "aws_region" "current" {}
-data "aws_caller_identity" "current" {}
-
-locals {
-  ecr_repo_name = split(":", split("/", var.image_uri)[1])[0]
-  ecr_repo_arn  = "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/${local.ecr_repo_name}"
 }
 
 # Secrets Manager: X-Origin-Secret
@@ -89,7 +86,7 @@ resource "aws_iam_role_policy" "ecr" {
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer",
         ]
-        Resource = local.ecr_repo_arn
+        Resource = var.ecr_repository_arn
       },
     ]
   })
