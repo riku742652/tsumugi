@@ -6,8 +6,12 @@ terraform {
   source = "../../../modules/lambda"
 }
 
-locals {
-  account_id = run_cmd("--terragrunt-quiet", "aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text")
+dependency "ecr" {
+  config_path = "../ecr"
+  mock_outputs = {
+    repository_url = "123456789012.dkr.ecr.ap-northeast-1.amazonaws.com/zaim-csv-api"
+    repository_arn = "arn:aws:ecr:ap-northeast-1:123456789012:repository/zaim-csv-api"
+  }
 }
 
 dependency "cognito" {
@@ -28,7 +32,8 @@ dependency "dynamodb" {
 
 inputs = {
   app_name            = "zaim-csv"
-  image_uri           = "${local.account_id}.dkr.ecr.ap-northeast-1.amazonaws.com/zaim-csv-api:latest"
+  image_uri           = "${dependency.ecr.outputs.repository_url}:latest"
+  ecr_repository_arn  = dependency.ecr.outputs.repository_arn
   dynamodb_table_arn  = dependency.dynamodb.outputs.table_arn
   dynamodb_table_name = dependency.dynamodb.outputs.table_name
   cognito_issuer      = dependency.cognito.outputs.issuer
