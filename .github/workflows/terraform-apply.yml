@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       module:
-        description: "Module to apply (cognito / dynamodb / lambda / cloudfront / all)"
+        description: "Module to apply (cognito / dynamodb / ecr / lambda / cloudfront / all)"
         required: true
         default: "all"
         type: choice
@@ -12,6 +12,7 @@ on:
           - all
           - cognito
           - dynamodb
+          - ecr
           - lambda
           - cloudfront
       env:
@@ -30,6 +31,7 @@ env:
   TF_VERSION: "1.7.5"
   TG_VERSION: "0.55.18"
   AWS_REGION: "ap-northeast-1"
+  ECR_REPOSITORY: "zaim-csv-api"
 
 jobs:
   apply:
@@ -61,6 +63,7 @@ jobs:
           chmod +x /usr/local/bin/terragrunt
           terragrunt --version
 
+      # --- single module ---
       - name: Terragrunt init + apply (single module)
         if: inputs.module != 'all'
         working-directory: infra/envs/${{ inputs.env }}/${{ inputs.module }}
@@ -68,12 +71,42 @@ jobs:
           terragrunt init --terragrunt-non-interactive
           terragrunt apply --terragrunt-non-interactive -auto-approve
 
-      - name: Terragrunt run-all apply (all modules)
+      # --- all modules: Group 1 (cognito / dynamodb / ecr) ---
+      - name: "Apply Group 1 — cognito / dynamodb / ecr"
         if: inputs.module == 'all'
         run: |
-          terragrunt run-all init --terragrunt-non-interactive
+          terragrunt run-all init --terragrunt-non-interactive \
+            --terragrunt-include-dir cognito \
+            --terragrunt-include-dir dynamodb \
+            --terragrunt-include-dir ecr
           terragrunt run-all apply --terragrunt-non-interactive -auto-approve \
             --terragrunt-include-dir cognito \
             --terragrunt-include-dir dynamodb \
+            --terragrunt-include-dir ecr
+
+      # --- all modules: build & push image (requires ECR to exist) ---
+      - name: Login to Amazon ECR
+        if: inputs.module == 'all'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        if: inputs.module == 'all'
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build \
+            -t "$REGISTRY/$ECR_REPOSITORY:latest" \
+            backend/
+          docker push "$REGISTRY/$ECR_REPOSITORY:latest"
+
+      # --- all modules: Group 2+3 (lambda / cloudfront) ---
+      - name: "Apply Group 2+3 — lambda / cloudfront"
+        if: inputs.module == 'all'
+        run: |
+          terragrunt run-all init --terragrunt-non-interactive \
+            --terragrunt-include-dir lambda \
+            --terragrunt-include-dir cloudfront
+          terragrunt run-all apply --terragrunt-non-interactive -auto-approve \
             --terragrunt-include-dir lambda \
             --terragrunt-include-dir cloudfront
