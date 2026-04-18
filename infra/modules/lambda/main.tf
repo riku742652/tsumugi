@@ -165,7 +165,7 @@ resource "aws_lambda_permission" "function_url" {
   function_url_auth_type = "NONE"
 }
 
-# lambda:InvokeFunction also required alongside InvokeFunctionUrl since Oct 2025
+# lambda:InvokeFunction is also required; removing it causes 403 on Function URL requests
 resource "aws_lambda_permission" "invoke" {
   statement_id  = "AllowPublicInvokeFunction"
   action        = "lambda:InvokeFunction"
