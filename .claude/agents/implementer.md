@@ -79,17 +79,18 @@ When given a topic or feature to implement:
 
 ## After merge
 
-13. Move the research and plan docs to `docs/completed/`:
+13. Move the research and plan docs to `docs/completed/`, then open a PR:
     ```
+    git checkout -b docs/archive-<topic>
     mv docs/research-<topic>.md docs/completed/
     mv docs/plan-<topic>.md docs/completed/
-    ```
-14. Commit and push directly to main:
-    ```
     git add docs/completed/
     git commit -m "docs: archive <topic> research and plan to completed"
-    git push
+    git push -u origin docs/archive-<topic>
+    gh pr create --base main --title "docs: archive <topic> docs to completed" --body "Archiving completed research and plan documents."
+    gh pr merge --squash --delete-branch
     ```
+    Never push directly to main — always use a branch and PR, even for doc-only changes.
 
 ## If something is wrong
 
