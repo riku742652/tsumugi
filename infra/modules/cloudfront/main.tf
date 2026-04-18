@@ -7,9 +7,9 @@ variable "lambda_function_url" {
   description = "Lambda Function URL (without trailing slash)"
 }
 
-variable "origin_secret_value" {
-  type      = string
-  sensitive = true
+variable "lambda_function_name" {
+  type        = string
+  description = "Lambda function name (for resource-based policy)"
 }
 
 # S3 bucket for frontend static files
@@ -26,10 +26,18 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   restrict_public_buckets = true
 }
 
-# CloudFront Origin Access Control
+# CloudFront Origin Access Control — S3
 resource "aws_cloudfront_origin_access_control" "frontend" {
   name                              = "${var.app_name}-oac"
   origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+# CloudFront Origin Access Control — Lambda
+resource "aws_cloudfront_origin_access_control" "lambda" {
+  name                              = "${var.app_name}-lambda-oac"
+  origin_access_control_origin_type = "lambda"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
 }
@@ -73,21 +81,17 @@ resource "aws_cloudfront_distribution" "main" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend.id
   }
 
-  # Origin 2: Lambda Function URL (API)
+  # Origin 2: Lambda Function URL (API) — signed by OAC with SigV4
   origin {
-    origin_id   = "lambda-api"
-    domain_name = local.lambda_origin_domain
+    origin_id                = "lambda-api"
+    domain_name              = local.lambda_origin_domain
+    origin_access_control_id = aws_cloudfront_origin_access_control.lambda.id
 
     custom_origin_config {
       http_port              = 80
       https_port             = 443
       origin_protocol_policy = "https-only"
       origin_ssl_protocols   = ["TLSv1.2"]
-    }
-
-    custom_header {
-      name  = "X-Origin-Secret"
-      value = var.origin_secret_value
     }
   }
 
@@ -116,7 +120,7 @@ resource "aws_cloudfront_distribution" "main" {
 
     forwarded_values {
       query_string = true
-      headers      = ["Authorization", "Content-Type"]
+      headers      = ["Origin", "X-Authorization", "Content-Type"]
       cookies {
         forward = "none"
       }
@@ -144,6 +148,16 @@ resource "aws_cloudfront_distribution" "main" {
     response_code      = 200
     response_page_path = "/index.html"
   }
+}
+
+# Allow CloudFront to invoke the Lambda Function URL via SigV4 (OAC)
+resource "aws_lambda_permission" "cloudfront" {
+  statement_id           = "AllowCloudFrontInvoke"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = var.lambda_function_name
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.main.arn
+  function_url_auth_type = "AWS_IAM"
 }
 
 output "distribution_id" {

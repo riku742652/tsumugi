@@ -1,28 +1,12 @@
-import hmac
 import os
-import boto3
 import requests
-from fastapi import Header, HTTPException, Depends
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Header, HTTPException
 from jose import jwt, jwk, JWTError
 
 # ---------------------------------------------------------------------------
 # Cached values — populated at startup via lifespan
 # ---------------------------------------------------------------------------
-_origin_secret: str | None = None
 _jwks: dict | None = None
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-def _get_origin_secret() -> str:
-    global _origin_secret
-    if _origin_secret is None:
-        secret_arn = os.environ["ORIGIN_SECRET_ARN"]
-        client = boto3.client("secretsmanager")
-        response = client.get_secret_value(SecretId=secret_arn)
-        _origin_secret = response["SecretString"]
-    return _origin_secret
 
 
 def _get_jwks() -> dict:
@@ -52,13 +36,19 @@ def _get_signing_key(token: str):
 # Dependencies
 # ---------------------------------------------------------------------------
 
-def verify_origin_secret(x_origin_secret: str = Header(...)) -> None:
-    expected = _get_origin_secret()
-    if not hmac.compare_digest(x_origin_secret, expected):
-        raise HTTPException(status_code=403, detail="Forbidden")
+async def get_current_user(x_authorization: str = Header(...)) -> str:
+    """Extract and verify Cognito JWT from the X-Authorization header.
 
-
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
+    CloudFront OAC overwrites the standard Authorization header with SigV4,
+    so clients must send the JWT in X-Authorization instead.
+    """
+    if not x_authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=401,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    token = x_authorization.removeprefix("Bearer ")
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",

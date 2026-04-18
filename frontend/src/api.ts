@@ -11,7 +11,7 @@ export async function uploadTransactions(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      'X-Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({ transactions: rows }),
   });
@@ -29,7 +29,7 @@ export async function fetchTransactions(
   if (to) params.set('to', to);
   const query = params.toString() ? `?${params.toString()}` : '';
   const res = await fetch(`${API_BASE}${query}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { 'X-Authorization': `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
   const data: { transactions: Transaction[] } = await res.json();

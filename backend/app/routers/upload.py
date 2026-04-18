@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from ..models import Transaction
-from ..auth import get_current_user, verify_origin_secret
+from ..auth import get_current_user
 
-router = APIRouter(dependencies=[Depends(verify_origin_secret)])
+router = APIRouter()
 
 _dynamodb = boto3.resource("dynamodb")
 
