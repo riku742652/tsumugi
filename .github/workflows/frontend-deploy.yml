@@ -3,12 +3,18 @@ name: Frontend Deploy
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - "frontend/**"
 
 permissions:
   id-token: write   # OIDC
   contents: read
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: true
 
 env:
   AWS_REGION: "ap-northeast-1"
@@ -33,11 +39,11 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/package.json
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Build
         working-directory: frontend
@@ -48,10 +54,10 @@ jobs:
 
       - name: Sync to S3
         run: |
-          aws s3 sync frontend/dist/ s3://${{ env.S3_BUCKET }} --delete
+          aws s3 sync frontend/dist/ s3://${{ env.S3_BUCKET }}
 
       - name: Invalidate CloudFront cache
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CF_DISTRIBUTION_ID }} \
-            --paths "/*"
+            --paths "/index.html"
