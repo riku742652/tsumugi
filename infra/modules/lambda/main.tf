@@ -125,17 +125,11 @@ resource "aws_lambda_function" "api" {
 }
 
 # Lambda Function URL (auth: AWS_IAM — CloudFront OAC signs requests with SigV4)
+# CORS is omitted: AWS_IAM auth type does not support Function URL CORS config.
+# CORS is handled by FastAPI middleware instead.
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
   authorization_type = "AWS_IAM"
-
-  cors {
-    allow_credentials = false
-    allow_origins     = ["*"]
-    allow_methods     = ["*"]
-    allow_headers     = ["*"]
-    max_age           = 0
-  }
 }
 
 output "function_url" {
