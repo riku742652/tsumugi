@@ -60,6 +60,27 @@ Environment: lambda tf state updated locally via terragrunt import (both permiss
 ---
 
 Session: 2026-04-18
+Completed: Lambda Function URL CORS removal (PR #13)
+  - infra/modules/lambda/main.tf: removed cors block from aws_lambda_function_url; AWS_IAM auth type does not support Function URL CORS config; added clarifying comment; CORS handled by FastAPI middleware
+In Progress: (none)
+Blocked: (none)
+Next: Run terraform-apply module=lambda to verify no-diff after CORS block removal
+Environment: No new dependencies
+
+---
+
+Session: 2026-04-18
+Completed: Lambda permission auth type fix (PR #14)
+  - infra/modules/cloudfront/main.tf: aws_lambda_permission.cloudfront function_url_auth_type AWS_IAM → NONE to match actual Function URL auth type and resolve CloudFront 403
+  - infra/modules/lambda/main.tf: aws_lambda_function_url.api authorization_type AWS_IAM → NONE to align Terraform state with actual AWS config; updated comment to reflect deferred AWS_IAM migration
+In Progress: (none)
+Blocked: (none)
+Next: Resolve UpdateFunctionUrlConfig CORS issue, then retry AWS_IAM migration
+Environment: No new dependencies
+
+---
+
+Session: 2026-04-18
 Completed: CloudFront OAC + Lambda AWS_IAM migration (PR #12)
   - infra/modules/lambda/main.tf: authorization_type="AWS_IAM"; removed random_password/aws_secretsmanager_secret/aws_secretsmanager_secret_version; removed aws_iam_role_policy.secrets; removed aws_lambda_permission (principal="*"); removed ORIGIN_SECRET_ARN env var; removed origin_secret_* outputs; added function_name output
   - infra/modules/cloudfront/main.tf: added Lambda OAC (origin_access_control_origin_type="lambda"); attached OAC to lambda origin; removed custom_header X-Origin-Secret; added aws_lambda_permission.cloudfront (principal=cloudfront.amazonaws.com); changed forwarded_values.headers to ["Origin", "X-Authorization", "Content-Type"]; changed variable origin_secret_value → lambda_function_name
