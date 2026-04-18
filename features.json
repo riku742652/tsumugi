@@ -18,5 +18,11 @@
     "title": "ECR repository as first-class Terraform/Terragrunt resource",
     "status": "done",
     "notes": "New ECR module + env config, Lambda module refactored to accept ecr_repository_arn variable, terraform-apply.yml updated with 3-stage all-deploy"
+  },
+  "frontend-deploy": {
+    "id": "frontend-deploy",
+    "title": "Frontend deploy GitHub Actions workflow",
+    "status": "done",
+    "notes": "New .github/workflows/frontend-deploy.yml — OIDC auth, Node 20 + npm cache, Vite build with Cognito secrets, S3 sync + CloudFront invalidation"
   }
 }

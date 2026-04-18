@@ -25,6 +25,16 @@ Environment: frontend needs `npm install`; backend needs Python 3.12 + pip insta
 
 ---
 
+Session: 2026-04-18
+Completed: frontend-deploy feature (Task 1)
+  Task 1: New .github/workflows/frontend-deploy.yml — triggers on push to frontend/** or workflow_dispatch; OIDC AWS auth via aws-actions/configure-aws-credentials@v4; Node 20 + npm cache; Vite build injecting VITE_COGNITO_USER_POOL_ID + VITE_COGNITO_CLIENT_ID from secrets; aws s3 sync --delete to zaim-csv-frontend; CloudFront cache invalidation via CF_DISTRIBUTION_ID secret
+In Progress: (none)
+Blocked: (none)
+Next: Register CF_DISTRIBUTION_ID, VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID secrets in GitHub repo settings; add S3+CloudFront IAM permissions to AWS_DEPLOY_ROLE_ARN
+Environment: No code dependencies; workflow runs on GitHub-hosted ubuntu-latest
+
+---
+
 Session: 2026-04-12
 Completed: ecr feature (Tasks 1–5)
   Task 1: New infra/modules/ecr/main.tf — aws_ecr_repository resource, outputs repository_url + repository_arn
