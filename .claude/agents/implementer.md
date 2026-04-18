@@ -79,17 +79,20 @@ When given a topic or feature to implement:
 
 ## After merge
 
-13. Move the research and plan docs to `docs/completed/`:
+13. Move the research and plan docs to `docs/completed/`, then open a PR and run the full review cycle:
     ```
-    mv docs/research-<topic>.md docs/completed/
-    mv docs/plan-<topic>.md docs/completed/
-    ```
-14. Commit and push directly to main:
-    ```
+    git checkout main
+    git pull --ff-only
+    git checkout -b chore/archive-<topic>
+    mv docs/research-<topic>.md docs/completed/ 2>/dev/null || true
+    mv docs/plan-<topic>.md docs/completed/ 2>/dev/null || true
     git add docs/completed/
     git commit -m "docs: archive <topic> research and plan to completed"
-    git push
+    git push -u origin chore/archive-<topic>
+    gh pr create --base main --title "docs: archive <topic> docs to completed" --body "Archiving completed research and plan documents."
     ```
+    Note the docs PR number. Then repeat steps 7–12 for this docs PR (wait for Gemini/Copilot, address comments in Japanese, re-wait until positive, then merge).
+    Never push directly to main — always use a branch and PR, even for doc-only changes.
 
 ## If something is wrong
 
