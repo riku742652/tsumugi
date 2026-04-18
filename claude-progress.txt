@@ -30,7 +30,7 @@ Completed: frontend-deploy feature (Task 1)
   Task 1: New .github/workflows/frontend-deploy.yml — triggers on push to frontend/** or workflow_dispatch; OIDC AWS auth via aws-actions/configure-aws-credentials@v4; Node 20 + npm cache; Vite build injecting VITE_COGNITO_USER_POOL_ID + VITE_COGNITO_CLIENT_ID from secrets; aws s3 sync --delete to zaim-csv-frontend; CloudFront cache invalidation via CF_DISTRIBUTION_ID secret
 In Progress: (none)
 Blocked: (none)
-Next: Register CF_DISTRIBUTION_ID, VITE_COGNITO_USER_POOL_ID, VITE_COGNITO_CLIENT_ID secrets in GitHub repo settings; add S3+CloudFront IAM permissions to AWS_DEPLOY_ROLE_ARN
+Next: (none — secrets registered, IAM permissions added, deploy verified)
 Environment: No code dependencies; workflow runs on GitHub-hosted ubuntu-latest
 
 ---
@@ -44,5 +44,32 @@ Completed: ecr feature (Tasks 1–5)
   Task 5: .github/workflows/terraform-apply.yml — added ecr to module choices, split all-deploy into 3 stages (Group 1 apply, ECR login+push, Group 2+3 apply)
 In Progress: (none)
 Blocked: (none)
-Next: Run terraform-apply with module=all for first-time ECR bootstrap deployment
+Next: (none — ECR bootstrap deploy completed)
 Environment: AWS_DEPLOY_ROLE_ARN secret must have ecr:GetAuthorizationToken + ecr:BatchGetImage + ecr:PutImage permissions
+
+---
+
+Session: 2026-04-18
+Completed: Lambda 403 fix (PR #10, #11)
+  Root causes: (1) aws_lambda_permission missing — AWS requires both lambda:InvokeFunctionUrl AND lambda:InvokeFunction for public Function URL access since Oct 2025; (2) ECR image stale — module=lambda apply skips Docker build, requires module=all; (3) terraform state mismatch after manual permission changes — resolved with terragrunt import
+In Progress: (none)
+Blocked: (none)
+Next: Run terraform-apply module=lambda to verify no-diff; future: migrate to CloudFront OAC + authorization_type=AWS_IAM to eliminate lambda:InvokeFunction principal="*"
+Environment: lambda tf state updated locally via terragrunt import (both permissions imported)
+
+---
+
+Session: 2026-04-18
+Completed: CloudFront OAC + Lambda AWS_IAM migration (PR #12)
+  - infra/modules/lambda/main.tf: authorization_type="AWS_IAM"; removed random_password/aws_secretsmanager_secret/aws_secretsmanager_secret_version; removed aws_iam_role_policy.secrets; removed aws_lambda_permission (principal="*"); removed ORIGIN_SECRET_ARN env var; removed origin_secret_* outputs; added function_name output
+  - infra/modules/cloudfront/main.tf: added Lambda OAC (origin_access_control_origin_type="lambda"); attached OAC to lambda origin; removed custom_header X-Origin-Secret; added aws_lambda_permission.cloudfront (principal=cloudfront.amazonaws.com); changed forwarded_values.headers to ["Origin", "X-Authorization", "Content-Type"]; changed variable origin_secret_value → lambda_function_name
+  - infra/envs/prod/cloudfront/terragrunt.hcl: replaced origin_secret_value with lambda_function_name in mock_outputs and inputs
+  - backend/app/auth.py: removed _get_origin_secret/_origin_secret/verify_origin_secret/import hmac/import boto3; moved JWT extraction from Authorization header to X-Authorization header via Header(...) dependency
+  - backend/app/main.py: removed _get_origin_secret() from lifespan
+  - backend/app/routers/upload.py + transactions.py: removed verify_origin_secret dependency
+  - frontend/src/api.ts: changed Authorization → X-Authorization header for JWT transmission
+  Review: Gemini flagged (1) OAC overwrites Authorization header breaking JWT auth — fixed by X-Authorization; (2) Origin header not forwarded for CORS — fixed by adding Origin to forwarded_values.headers
+In Progress: (none)
+Blocked: (none)
+Next: Run terraform-apply module=all to deploy OAC + AWS_IAM changes to prod
+Environment: Lambda TF state has old aws_lambda_permission resources (principal="*") — must be destroyed by next apply
