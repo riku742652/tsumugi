@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "agent",
+            "if": "Write(*docs/research-*)",
+            "statusMessage": "Reviewing research doc...",
+            "timeout": 60,
+            "prompt": "You are a review agent for the harness engineering workflow. A research document was just written.\n\nTool input: $ARGUMENTS\n\nExtract file_path from tool_input, read the file, and review it against the required structure:\n\nRequired sections: Relevant Files, Existing Patterns, Constraints & Gotchas, Open Questions (plus any domain-specific sections like Entry Points).\n\nFor each section check:\n- Present and non-empty?\n- Specific (exact file paths and function names, not vague)?\n- Constraints clearly stated?\n- Open questions actionable (each one has a decision to make)?\n\nOutput your review via hookSpecificOutput.additionalContext. Format:\n\n**Research Review:**\n- [what is solid]\n- [what is missing or too vague]\n- [any red flags or unresolved ambiguities]\n\nIf the document is thorough and complete, say so in one line. Keep the whole review under 150 words."
+          },
+          {
+            "type": "agent",
+            "if": "Write(*docs/plan-*)",
+            "statusMessage": "Reviewing plan doc...",
+            "timeout": 60,
+            "prompt": "You are a review agent for the harness engineering workflow. A plan document was just written.\n\nTool input: $ARGUMENTS\n\nExtract file_path from tool_input, read the file, and review it against the required structure:\n\nRequired sections: Overview, Tasks (each with File, Change, Why), Task Order, Trade-offs & Alternatives, Out of Scope.\n\nFor each task check:\n- File path is exact (no placeholders)?\n- Change includes a concrete before/after snippet or full new-file content?\n- Why is clearly explained?\n\nAlso check: Does Task Order explain real dependencies? Are trade-offs substantive (not just \"rejected for simplicity\")?\n\nOutput your review via hookSpecificOutput.additionalContext. Format:\n\n**Plan Review:**\n- [what is solid]\n- [tasks or sections that need more detail]\n- [any gaps that would block implementation]\n\nIf the plan is complete and immediately implementable, say so in one line. Keep the whole review under 150 words."
+          }
+        ]
+      }
+    ]
+  }
+}

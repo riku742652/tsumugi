@@ -63,19 +63,33 @@ When given a topic or feature to implement:
       gh api repos/{owner}/{repo}/pulls/<number>/comments/<comment_id>/replies \
         -f body="@<reviewer_login> <変更内容と理由の説明（日本語）>"
       ```
-10. Repeat step 9 until all reviewer threads are addressed.
+10. After pushing fixes, wait again for re-reviews — two rounds of 90 seconds:
+    ```
+    sleep 90 && sleep 90
+    ```
+    Then re-fetch all reviews and comments (step 8) and check for new concerns.
+11. Repeat steps 9–10 until every reviewer's latest comment is positive (approval, LGTM, or no remaining concerns).
 
 ## Merge condition
 
-11. Fetch the latest state of all reviews:
+12. Once all reviewer comments are positive/neutral with no open concerns, merge:
     ```
-    gh pr view <number> --json reviews
+    gh pr merge <number> --squash --delete-branch
     ```
-    - If every reviewer's latest comment is an approval or a positive/neutral acknowledgement with no remaining concerns, merge:
-      ```
-      gh pr merge <number> --squash --delete-branch
-      ```
-    - If any reviewer still has an unresolved concern, return to step 9.
+
+## After merge
+
+13. Move the research and plan docs to `docs/completed/`:
+    ```
+    mv docs/research-<topic>.md docs/completed/
+    mv docs/plan-<topic>.md docs/completed/
+    ```
+14. Commit and push directly to main:
+    ```
+    git add docs/completed/
+    git commit -m "docs: archive <topic> research and plan to completed"
+    git push
+    ```
 
 ## If something is wrong
 
