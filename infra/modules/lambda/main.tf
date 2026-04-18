@@ -33,22 +33,6 @@ variable "cloudfront_domain" {
   default = ""
 }
 
-# Secrets Manager: X-Origin-Secret
-resource "random_password" "origin_secret" {
-  length  = 32
-  special = false
-}
-
-resource "aws_secretsmanager_secret" "origin_secret" {
-  name                    = "${var.app_name}/origin-secret"
-  recovery_window_in_days = 0
-}
-
-resource "aws_secretsmanager_secret_version" "origin_secret" {
-  secret_id     = aws_secretsmanager_secret.origin_secret.id
-  secret_string = random_password.origin_secret.result
-}
-
 # IAM role for Lambda
 resource "aws_iam_role" "lambda" {
   name = "${var.app_name}-lambda-role"
@@ -114,20 +98,6 @@ resource "aws_iam_role_policy" "dynamodb" {
   })
 }
 
-resource "aws_iam_role_policy" "secrets" {
-  name = "secrets-access"
-  role = aws_iam_role.lambda.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
-      Resource = aws_secretsmanager_secret.origin_secret.arn
-    }]
-  })
-}
-
 # Lambda function
 resource "aws_lambda_function" "api" {
   function_name = "${var.app_name}-api"
@@ -141,7 +111,6 @@ resource "aws_lambda_function" "api" {
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy.ecr,
     aws_iam_role_policy.dynamodb,
-    aws_iam_role_policy.secrets,
   ]
 
   environment {
@@ -150,33 +119,15 @@ resource "aws_lambda_function" "api" {
       DYNAMODB_TABLE    = var.dynamodb_table_name
       COGNITO_ISSUER    = var.cognito_issuer
       COGNITO_CLIENT_ID = var.cognito_client_id
-      ORIGIN_SECRET_ARN = aws_secretsmanager_secret.origin_secret.arn
       CLOUDFRONT_DOMAIN = var.cloudfront_domain
     }
   }
 }
 
-# Allow public invocation via Function URL (required since AWS enforced this in Oct 2025)
-resource "aws_lambda_permission" "function_url" {
-  statement_id           = "AllowPublicFunctionUrlAccess"
-  action                 = "lambda:InvokeFunctionUrl"
-  function_name          = aws_lambda_function.api.function_name
-  principal              = "*"
-  function_url_auth_type = "NONE"
-}
-
-# lambda:InvokeFunction is also required; removing it causes 403 on Function URL requests
-resource "aws_lambda_permission" "invoke" {
-  statement_id  = "AllowPublicInvokeFunction"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "*"
-}
-
-# Lambda Function URL (auth: NONE — protected by X-Origin-Secret)
+# Lambda Function URL (auth: AWS_IAM — CloudFront OAC signs requests with SigV4)
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
-  authorization_type = "NONE"
+  authorization_type = "AWS_IAM"
 
   cors {
     allow_credentials = false
@@ -195,11 +146,6 @@ output "function_arn" {
   value = aws_lambda_function.api.arn
 }
 
-output "origin_secret_arn" {
-  value = aws_secretsmanager_secret.origin_secret.arn
-}
-
-output "origin_secret_value" {
-  value     = random_password.origin_secret.result
-  sensitive = true
+output "function_name" {
+  value = aws_lambda_function.api.function_name
 }

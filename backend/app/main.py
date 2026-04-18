@@ -11,10 +11,9 @@ from .routers import upload, transactions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Pre-fetch JWKS and origin secret at startup to avoid blocking on first request."""
+    """Pre-fetch JWKS at startup to avoid blocking on first request."""
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, auth._get_jwks)
-    await loop.run_in_executor(None, auth._get_origin_secret)
     yield
 
 
