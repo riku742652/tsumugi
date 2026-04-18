@@ -158,6 +158,7 @@ resource "aws_lambda_function" "api" {
 
 # Allow public invocation via Function URL (resource-based policy required even for auth_type=NONE)
 resource "aws_lambda_permission" "function_url" {
+  statement_id           = "AllowFunctionUrlInvocation"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.api.function_name
   principal              = "*"
