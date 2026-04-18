@@ -9,7 +9,8 @@
     "noImplicitReturns": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"]
   },
   "include": ["src"]
 }
