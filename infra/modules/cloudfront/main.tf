@@ -157,7 +157,7 @@ resource "aws_lambda_permission" "cloudfront" {
   function_name          = var.lambda_function_name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.main.arn
-  function_url_auth_type = "NONE"
+  function_url_auth_type = "AWS_IAM"
 }
 
 resource "aws_lambda_permission" "cloudfront_invoke_function" {
