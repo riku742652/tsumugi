@@ -1,4 +1,7 @@
+import json
 import os
+from decimal import Decimal
+
 import boto3
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -27,7 +30,10 @@ async def upload_transactions(
     table = _dynamodb.Table(os.environ["DYNAMODB_TABLE"])
 
     items = [
-        {**tx.model_dump(), "userId": user_id}
+        json.loads(
+            json.dumps({**tx.model_dump(), "userId": user_id}),
+            parse_float=Decimal,
+        )
         for tx in body.transactions
     ]
 
