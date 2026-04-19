@@ -22,15 +22,8 @@ Chart.register(
   Legend
 );
 
-// Track chart instances so they can be destroyed on re-render
-const chartInstances = new Map<HTMLCanvasElement, Chart>();
-
 function destroyIfExists(canvas: HTMLCanvasElement): void {
-  const existing = chartInstances.get(canvas);
-  if (existing) {
-    existing.destroy();
-    chartInstances.delete(canvas);
-  }
+  Chart.getChart(canvas)?.destroy();
 }
 
 // Returns sorted unique YYYY-MM strings from data
@@ -51,7 +44,7 @@ export function renderMonthlyExpense(
       .filter((t) => t.date.startsWith(m) && t.type === 'payment')
       .reduce((sum, t) => sum + t.expense, 0)
   );
-  const chart = new Chart(canvas, {
+  new Chart(canvas, {
     type: 'bar',
     data: {
       labels: months,
@@ -59,7 +52,6 @@ export function renderMonthlyExpense(
     },
     options: { responsive: true, plugins: { legend: { display: false } } },
   });
-  chartInstances.set(canvas, chart);
 }
 
 // ② カテゴリ別内訳（ドーナツグラフ）
@@ -80,7 +72,7 @@ export function renderCategoryBreakdown(
     '#1976d2', '#388e3c', '#f57c00', '#7b1fa2', '#c62828',
     '#00838f', '#558b2f', '#4527a0', '#ef6c00', '#2e7d32',
   ];
-  const chart = new Chart(canvas, {
+  new Chart(canvas, {
     type: 'doughnut',
     data: {
       labels,
@@ -88,7 +80,6 @@ export function renderCategoryBreakdown(
     },
     options: { responsive: true },
   });
-  chartInstances.set(canvas, chart);
 }
 
 // ③ 収入 vs 支出（積み上げ棒グラフ）
@@ -108,7 +99,7 @@ export function renderIncomeVsExpense(
       .filter((t) => t.date.startsWith(m) && t.type === 'payment')
       .reduce((sum, t) => sum + t.expense, 0)
   );
-  const chart = new Chart(canvas, {
+  new Chart(canvas, {
     type: 'bar',
     data: {
       labels: months,
@@ -119,7 +110,6 @@ export function renderIncomeVsExpense(
     },
     options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } },
   });
-  chartInstances.set(canvas, chart);
 }
 
 // ④ カテゴリ別月次推移（折れ線グラフ、上位5カテゴリ）
@@ -156,10 +146,9 @@ export function renderCategoryTrend(
     tension: 0.3,
   }));
 
-  const chart = new Chart(canvas, {
+  new Chart(canvas, {
     type: 'line',
     data: { labels: months, datasets },
     options: { responsive: true },
   });
-  chartInstances.set(canvas, chart);
 }
