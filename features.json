@@ -60,5 +60,11 @@
     "title": "Fix BUG-03 (month-end date), BUG-04 (userId in client model), BUG-10 (Lambda wildcard principal)",
     "status": "done",
     "notes": "BUG-03: new Date(y,m,0).getDate() zero-day trick for correct last-day-of-month. BUG-04: removed userId from Transaction Pydantic model and TS interface; extra='ignore' added for safe rollout; userId injected post model_dump() from JWT. BUG-10: replaced principal='*' Lambda permissions with cloudfront.amazonaws.com + source_arn condition."
+  },
+  "lambda-aws-iam-403": {
+    "id": "lambda-aws-iam-403",
+    "title": "Fix Lambda 403 AccessDeniedException — align Function URL AuthType to AWS_IAM",
+    "status": "done",
+    "notes": "Root cause: CloudFront OAC signing_behavior=always with Function URL authorization_type=NONE caused 403. Fix: authorization_type=AWS_IAM on Function URL + function_url_auth_type=AWS_IAM on CloudFront permission. Applied via GitHub Actions (main) PR #32. Confirmed: /api/transactions returns HTTP 422 (FastAPI reached)."
   }
 }
