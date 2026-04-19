@@ -124,12 +124,12 @@ resource "aws_lambda_function" "api" {
   }
 }
 
-# Lambda Function URL (auth: NONE — public endpoint protected only by CloudFront OAC permission)
-# CORS is omitted: handled by FastAPI middleware instead.
-# AWS_IAM migration deferred until CORS / UpdateFunctionUrlConfig issue is resolved.
+# Lambda Function URL (auth: AWS_IAM — CloudFront OAC SigV4 is validated by Lambda)
+# CORS is omitted: handled by FastAPI CORSMiddleware instead.
+# No cors {} block allowed when authorization_type = AWS_IAM (AWS rejects UpdateFunctionUrlConfig).
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
-  authorization_type = "NONE"
+  authorization_type = "AWS_IAM"
 }
 
 output "function_url" {

@@ -92,6 +92,19 @@ Environment: No new dependencies
 
 ---
 
+Session: 2026-04-19
+Completed: cloudfront-lambda-aws-iam-cors (Task 1 + Task 2)
+  - infra/modules/lambda/main.tf: authorization_type "NONE" → "AWS_IAM"; updated comment
+  - infra/modules/cloudfront/main.tf: aws_lambda_permission.cloudfront function_url_auth_type "NONE" → "AWS_IAM"
+  Root cause: OAC signing_behavior=always + authorization_type=NONE is architecturally incorrect; AWS requires AWS_IAM on the Function URL for OAC to validate SigV4 signatures end-to-end
+  Post-apply validation: expect 401 (FastAPI JWT check) from unauthenticated GET, not 403 (Lambda auth layer)
+In Progress: (none)
+Blocked: (none)
+Next: Trigger terraform-apply workflow (module=all or lambda then cloudfront); validate live endpoint
+Environment: No new dependencies
+
+---
+
 Session: 2026-04-18
 Completed: CloudFront OAC + Lambda AWS_IAM migration (PR #12)
   - infra/modules/lambda/main.tf: authorization_type="AWS_IAM"; removed random_password/aws_secretsmanager_secret/aws_secretsmanager_secret_version; removed aws_iam_role_policy.secrets; removed aws_lambda_permission (principal="*"); removed ORIGIN_SECRET_ARN env var; removed origin_secret_* outputs; added function_name output

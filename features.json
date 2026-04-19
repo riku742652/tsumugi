@@ -36,5 +36,11 @@
     "title": "Fix CloudFront -> Lambda Function URL 403 AccessDeniedException",
     "status": "done",
     "notes": "Added aws_lambda_permission.cloudfront_invoke_function (lambda:InvokeFunction) alongside existing lambda:InvokeFunctionUrl."
+  },
+  "cloudfront-lambda-aws-iam-cors": {
+    "id": "cloudfront-lambda-aws-iam-cors",
+    "title": "Fix CloudFront OAC + Lambda AWS_IAM authorization and CORS",
+    "status": "done",
+    "notes": "Changed authorization_type to AWS_IAM on Lambda Function URL and function_url_auth_type to AWS_IAM on aws_lambda_permission.cloudfront. No CORS block in Function URL (incompatible with AWS_IAM). CORS handled entirely by FastAPI CORSMiddleware."
   }
 }
