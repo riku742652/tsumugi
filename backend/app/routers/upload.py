@@ -28,13 +28,16 @@ async def upload_transactions(
 ) -> UploadResponse:
     table = _dynamodb.Table(os.environ["DYNAMODB_TABLE"])
 
-    items = [
-        {
+    seen: set[str] = set()
+    items = []
+    for tx in body.transactions:
+        if tx.txId in seen:
+            continue
+        seen.add(tx.txId)
+        items.append({
             k: (Decimal(str(v)) if isinstance(v, float) else v)
             for k, v in {**tx.model_dump(), "userId": user_id}.items()
-        }
-        for tx in body.transactions
-    ]
+        })
 
     with table.batch_writer() as batch:
         for item in items:
