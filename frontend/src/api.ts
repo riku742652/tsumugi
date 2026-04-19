@@ -1,7 +1,18 @@
-import { getIdToken } from './auth';
+import { getIdToken, signOut } from './auth';
 import type { Transaction } from './types';
 
 const API_BASE = '/api/transactions';
+
+async function handleUnauthorized(res: Response, context: string): Promise<never> {
+  if (res.status === 401) {
+    try {
+      await signOut();
+    } finally {
+      window.location.href = '/';
+    }
+  }
+  throw new Error(`${context}: ${res.status}`);
+}
 
 export async function uploadTransactions(
   rows: Transaction[]
@@ -15,7 +26,7 @@ export async function uploadTransactions(
     },
     body: JSON.stringify({ transactions: rows }),
   });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+  if (!res.ok) return handleUnauthorized(res, 'Upload failed');
   return res.json();
 }
 
@@ -31,7 +42,7 @@ export async function fetchTransactions(
   const res = await fetch(`${API_BASE}${query}`, {
     headers: { 'X-Authorization': `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+  if (!res.ok) return handleUnauthorized(res, 'Fetch failed');
   const data: { transactions: Transaction[] } = await res.json();
   return data.transactions;
 }

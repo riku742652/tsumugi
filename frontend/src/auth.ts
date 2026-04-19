@@ -23,7 +23,7 @@ export async function getCurrentUser(): Promise<{ userId: string; email: string 
 }
 
 export async function getIdToken(): Promise<string> {
-  const session = await fetchAuthSession();
+  const session = await fetchAuthSession({ forceRefresh: true });
   const token = session.tokens?.idToken?.toString();
   if (!token) throw new Error('No ID token');
   return token;
