@@ -124,7 +124,9 @@ resource "aws_lambda_function" "api" {
   }
 }
 
-# Lambda Function URL (auth: AWS_IAM — CloudFront OAC SigV4 is validated by Lambda)
+# Function URL uses no built-in auth; access is restricted via CloudFront OAC
+# SigV4 signing and a resource-based policy allowing only cloudfront.amazonaws.com.
+# CORS is handled by FastAPI CORSMiddleware.
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
   authorization_type = "NONE"
