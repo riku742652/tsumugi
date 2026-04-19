@@ -1,5 +1,8 @@
 import {
   Chart,
+  BarController,
+  DoughnutController,
+  LineController,
   BarElement,
   LineElement,
   ArcElement,
@@ -12,6 +15,9 @@ import {
 import type { Transaction } from './types';
 
 Chart.register(
+  BarController,
+  DoughnutController,
+  LineController,
   BarElement,
   LineElement,
   ArcElement,
