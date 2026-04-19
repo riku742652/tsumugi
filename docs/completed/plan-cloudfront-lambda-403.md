@@ -107,7 +107,7 @@ Order rationale:
 
 ## Out of Scope
 - Changes to `infra/modules/lambda/main.tf` authorization mode.
-- Any frontend/backed code updates (`frontend/src/api.ts`, `backend/app/auth.py`, `backend/app/main.py`).
+- Any frontend/backend code updates (`frontend/src/api.ts`, `backend/app/auth.py`, `backend/app/main.py`).
 - CI workflow changes in `.github/workflows/terraform-apply.yml`.
 - Unrelated feature tracking or multi-feature refactoring.
 - Migration of CloudFront cache behavior or CORS redesign.
