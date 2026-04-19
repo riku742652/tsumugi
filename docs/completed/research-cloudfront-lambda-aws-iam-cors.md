@@ -2,33 +2,33 @@
 
 ## Relevant Files
 
-- `/Users/riku/tsumugi/infra/modules/cloudfront/main.tf`
+- `infra/modules/cloudfront/main.tf`
   CloudFront distribution, Lambda OAC, forwarded headers in ordered_cache_behavior, and both current Lambda resource policy grants.
-- `/Users/riku/tsumugi/infra/modules/lambda/main.tf`
+- `infra/modules/lambda/main.tf`
   Lambda Function URL with `authorization_type = "NONE"` (current). Comment marks AWS_IAM migration deferred.
-- `/Users/riku/tsumugi/infra/envs/prod/cloudfront/terragrunt.hcl`
+- `infra/envs/prod/cloudfront/terragrunt.hcl`
   Wires `lambda_function_url` and `lambda_function_name` from lambda dependency into cloudfront module.
-- `/Users/riku/tsumugi/infra/envs/prod/lambda/terragrunt.hcl`
+- `infra/envs/prod/lambda/terragrunt.hcl`
   Dependency chain and apply order for lambda; no cloudfront_domain input currently.
-- `/Users/riku/tsumugi/backend/app/main.py`
+- `backend/app/main.py`
   FastAPI CORSMiddleware with `allow_credentials=False`, `allow_methods=["*"]`, `allow_headers=["*"]`. Reads `CLOUDFRONT_DOMAIN` env var to constrain `allow_origins`.
-- `/Users/riku/tsumugi/backend/app/auth.py`
+- `backend/app/auth.py`
   JWT extraction from `X-Authorization` header only. Backend never sees `Authorization`.
-- `/Users/riku/tsumugi/backend/app/routers/upload.py`
+- `backend/app/routers/upload.py`
   POST route using `get_current_user` (reads `X-Authorization`).
-- `/Users/riku/tsumugi/backend/app/routers/transactions.py`
+- `backend/app/routers/transactions.py`
   GET route using `get_current_user` (reads `X-Authorization`).
-- `/Users/riku/tsumugi/frontend/src/api.ts`
+- `frontend/src/api.ts`
   Client sends JWT in `X-Authorization` header. Also sends `X-Amz-Content-Sha256` on POST. Does NOT send `Authorization`.
-- `/Users/riku/tsumugi/.github/workflows/terraform-apply.yml`
+- `.github/workflows/terraform-apply.yml`
   Staged apply: Group 1 (cognito/dynamodb/ecr), ECR build/push, Group 2+3 (lambda/cloudfront). Triggers on workflow_dispatch.
-- `/Users/riku/tsumugi/claude-progress.txt`
+- `claude-progress.txt`
   Historical narrative of every 403 incident (#10, #11, #12, #13, #14) and what broke each time.
-- `/Users/riku/tsumugi/features.json`
+- `features.json`
   cloudfront-oac-iam and cloudfront-lambda-403 both marked done.
-- `/Users/riku/tsumugi/docs/completed/research-cloudfront-lambda-403.md`
+- `docs/completed/research-cloudfront-lambda-403.md`
   Prior research on the NONE-mode 403 (now resolved by adding lambda:InvokeFunction).
-- `/Users/riku/tsumugi/docs/completed/plan-cloudfront-lambda-403.md`
+- `docs/completed/plan-cloudfront-lambda-403.md`
   Prior plan: add cloudfront_invoke_function permission, confirmed implemented in PR #16.
 
 ---
