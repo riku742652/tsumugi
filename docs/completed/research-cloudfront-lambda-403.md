@@ -30,7 +30,7 @@
   - Dependency chain documentation (`cognito/dynamodb -> lambda -> cloudfront`) used by current apply flow.
 - `docs/completed/plan-ecr.md`
   - Historical deployment-order details for grouped terragrunt apply.
-- `/memories/repo/lambda-403.md`
+- `memories/repo/lambda-403.md`
   - Repository memory summary of expected request path and header conventions.
 
 ## Existing Patterns
@@ -269,4 +269,4 @@ Expected post-fix behavior:
 2. Should the second permission include additional conditions beyond `source_arn` (provider capability-dependent)?
 3. Should future migration back to `authorization_type = AWS_IAM` be re-scoped only after CORS/update-function-url-config issue is fully resolved and documented?
 
-Research complete. Review docs/research-cloudfront-lambda-403.md before starting the Plan phase.
+Research complete. Review docs/completed/research-cloudfront-lambda-403.md before starting the Plan phase.

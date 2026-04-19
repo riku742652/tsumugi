@@ -1,7 +1,7 @@
 # Plan: cloudfront-lambda-403
 
 ## Overview
-CloudFront -> Lambda Function URL path currently returns 403 AccessDeniedException before backend auth is reached. Based on docs/research-cloudfront-lambda-403.md, the minimal architecture-preserving fix is to keep Function URL authorization_type = NONE and add the missing CloudFront-scoped Lambda resource policy action (lambda:InvokeFunction) alongside the existing lambda:InvokeFunctionUrl permission. This plan intentionally avoids auth model migration, header convention changes, or broader infrastructure refactors.
+CloudFront -> Lambda Function URL path currently returns 403 AccessDeniedException before backend auth is reached. Based on docs/completed/research-cloudfront-lambda-403.md, the minimal architecture-preserving fix is to keep Function URL authorization_type = NONE and add the missing CloudFront-scoped Lambda resource policy action (lambda:InvokeFunction) alongside the existing lambda:InvokeFunctionUrl permission. This plan intentionally avoids auth model migration, header convention changes, or broader infrastructure refactors.
 
 ## Feature Status Check
 - `features.json` currently has no `cloudfront-lambda-403` entry.
