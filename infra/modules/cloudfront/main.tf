@@ -150,22 +150,17 @@ resource "aws_cloudfront_distribution" "main" {
   }
 }
 
-# Allow CloudFront to invoke the Lambda Function URL via SigV4 (OAC)
-resource "aws_lambda_permission" "cloudfront" {
-  statement_id           = "AllowCloudFrontInvoke"
+# Allow public invocation of the Lambda Function URL.
+# Security is enforced by JWT validation in FastAPI (X-Authorization header).
+# CloudFront-only access is not enforced at the Function URL layer because
+# Lambda cannot identify the cloudfront.amazonaws.com principal when
+# authorization_type = NONE (SigV4 signature is not verified).
+resource "aws_lambda_permission" "allow_public" {
+  statement_id           = "AllowPublicAccess"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = var.lambda_function_name
-  principal              = "cloudfront.amazonaws.com"
-  source_arn             = aws_cloudfront_distribution.main.arn
+  principal              = "*"
   function_url_auth_type = "NONE"
-}
-
-resource "aws_lambda_permission" "cloudfront_invoke_function" {
-  statement_id  = "AllowCloudFrontInvokeFunction"
-  action        = "lambda:InvokeFunction"
-  function_name = var.lambda_function_name
-  principal     = "cloudfront.amazonaws.com"
-  source_arn    = aws_cloudfront_distribution.main.arn
 }
 
 output "distribution_id" {
