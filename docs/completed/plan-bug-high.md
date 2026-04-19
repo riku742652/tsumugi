@@ -122,8 +122,7 @@ Add the `detectEncoding` helper above `parseZaimCsv` (no imports needed):
 
 ```ts
 /**
- * Returns 'Shift-JIS' when the file begins with a Shift-JIS BOM (0x82 0xEF...)
- * or contains byte sequences that are illegal in UTF-8.
+ * Returns 'Shift-JIS' when the file contains byte sequences that are illegal in UTF-8.
  * Falls back to 'UTF-8' (PapaParse default) otherwise.
  */
 async function detectEncoding(file: File): Promise<string> {
@@ -135,10 +134,9 @@ async function detectEncoding(file: File): Promise<string> {
     return 'UTF-8';
   }
 
-  // Shift-JIS BOM (rare but possible): 82 EF ...
-  // More reliable: try decoding as UTF-8 with fatal=true; if it throws the file is not UTF-8.
+  // Try decoding as UTF-8 with fatal=true; if it throws the file is not UTF-8.
   try {
-    new TextDecoder('utf-8', { fatal: true }).decode(probe);
+    new TextDecoder('utf-8', { fatal: true }).decode(probe, { stream: true });
     return 'UTF-8';
   } catch {
     return 'Shift-JIS';
