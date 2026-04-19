@@ -150,23 +150,24 @@ resource "aws_cloudfront_distribution" "main" {
   }
 }
 
-# Allow public invocation of the Lambda Function URL.
-# AWS requires both lambda:InvokeFunctionUrl AND lambda:InvokeFunction for
-# principal = "*" with authorization_type = NONE. Security is enforced by
-# JWT validation in FastAPI (X-Authorization header).
-resource "aws_lambda_permission" "allow_public_invoke_function_url" {
-  statement_id           = "AllowPublicInvokeFunctionUrl"
+# Restrict Lambda Function URL invocation to this CloudFront distribution only.
+# authorization_type=NONE is kept (AWS_IAM breaks POST with chunked encoding).
+# The source_arn condition ensures only this distribution's requests are accepted.
+resource "aws_lambda_permission" "allow_cloudfront_invoke_function_url" {
+  statement_id           = "AllowCloudfrontInvokeFunctionUrl"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = var.lambda_function_name
-  principal              = "*"
+  principal              = "cloudfront.amazonaws.com"
+  source_arn             = aws_cloudfront_distribution.main.arn
   function_url_auth_type = "NONE"
 }
 
-resource "aws_lambda_permission" "allow_public_invoke_function" {
-  statement_id  = "AllowPublicInvokeFunction"
+resource "aws_lambda_permission" "allow_cloudfront_invoke_function" {
+  statement_id  = "AllowCloudfrontInvokeFunction"
   action        = "lambda:InvokeFunction"
   function_name = var.lambda_function_name
-  principal     = "*"
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.main.arn
 }
 
 output "distribution_id" {

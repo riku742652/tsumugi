@@ -105,12 +105,8 @@ async function handleFile(file: File): Promise<void> {
     const excludeNonAgg = !includeNonAggregated.checked;
     const rows = await parseZaimCsv(file, excludeNonAgg);
 
-    const user = await getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
-
     const transactions: Transaction[] = await Promise.all(
       rows.map(async (row) => ({
-        userId: user.userId,
         txId: await makeTxId(row),
         date: row.date,
         type: row.type,
@@ -161,7 +157,13 @@ async function loadAndRender(): Promise<void> {
   setStatus('データを取得中…');
   try {
     const from = fromFilter.value ? fromFilter.value + '-01' : undefined;
-    const to = toFilter.value ? toFilter.value + '-31' : undefined;
+    const to = toFilter.value
+      ? (() => {
+          const [y, m] = toFilter.value.split('-').map(Number);
+          const lastDay = new Date(y, m, 0).getDate(); // m is 1-based (1–12); passing it as a 0-based month index with day=0 gives the last day of the selected month
+          return `${toFilter.value}-${String(lastDay).padStart(2, '0')}`;
+        })()
+      : undefined;
     const transactions = await fetchTransactions(from, to);
     renderAll(transactions);
     setStatus(`${transactions.length} 件のデータを表示中`);

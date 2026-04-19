@@ -54,5 +54,11 @@
     "title": "Fix BUG-01 (Cognito token expiry) and BUG-02 (Shift-JIS CSV mojibake)",
     "status": "done",
     "notes": "BUG-01: forceRefresh:true in getIdToken(); 401 handler in api.ts calls signOut()+redirect. BUG-02: detectEncoding() helper probes first 4KB with TextDecoder fatal=true; passes encoding to PapaParse."
+  },
+  "bug-medium": {
+    "id": "bug-medium",
+    "title": "Fix BUG-03 (month-end date), BUG-04 (userId in client model), BUG-10 (Lambda wildcard principal)",
+    "status": "done",
+    "notes": "BUG-03: new Date(y,m,0).getDate() zero-day trick for correct last-day-of-month. BUG-04: removed userId from Transaction Pydantic model and TS interface; extra='ignore' added for safe rollout; userId injected post model_dump() from JWT. BUG-10: replaced principal='*' Lambda permissions with cloudfront.amazonaws.com + source_arn condition."
   }
 }

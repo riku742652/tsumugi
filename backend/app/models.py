@@ -1,11 +1,12 @@
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 TransactionType = Literal["payment", "income", "transfer", "balance"]
 
 
 class Transaction(BaseModel):
-    userId: str
+    model_config = ConfigDict(extra="ignore")
+
     txId: str  # {date}#{uuid}
     date: str
     type: TransactionType
