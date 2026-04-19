@@ -1,4 +1,3 @@
-import json
 import os
 from decimal import Decimal
 
@@ -30,10 +29,10 @@ async def upload_transactions(
     table = _dynamodb.Table(os.environ["DYNAMODB_TABLE"])
 
     items = [
-        json.loads(
-            json.dumps({**tx.model_dump(), "userId": user_id}),
-            parse_float=Decimal,
-        )
+        {
+            k: (Decimal(str(v)) if isinstance(v, float) else v)
+            for k, v in {**tx.model_dump(), "userId": user_id}.items()
+        }
         for tx in body.transactions
     ]
 
