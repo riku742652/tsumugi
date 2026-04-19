@@ -1,4 +1,6 @@
 import os
+from decimal import Decimal
+
 import boto3
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -27,7 +29,10 @@ async def upload_transactions(
     table = _dynamodb.Table(os.environ["DYNAMODB_TABLE"])
 
     items = [
-        {**tx.model_dump(), "userId": user_id}
+        {
+            k: (Decimal(str(v)) if isinstance(v, float) else v)
+            for k, v in {**tx.model_dump(), "userId": user_id}.items()
+        }
         for tx in body.transactions
     ]
 
