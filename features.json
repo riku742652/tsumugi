@@ -27,14 +27,14 @@
   },
   "cloudfront-oac-iam": {
     "id": "cloudfront-oac-iam",
-    "title": "CloudFront OAC + Lambda authorization_type=AWS_IAM migration",
+    "title": "CloudFront OAC + Lambda migration",
     "status": "done",
-    "notes": "Replaced X-Origin-Secret shared secret with CloudFront OAC SigV4 signing. Lambda Function URL: authorization_type=AWS_IAM. JWT moved to X-Authorization header (OAC overwrites Authorization). Removed Secrets Manager dependency from Lambda."
+    "notes": "Replaced X-Origin-Secret shared secret with CloudFront OAC SigV4 signing. Lambda Function URL: authorization_type=NONE (AWS_IAM deferred). JWT moved to X-Authorization header (OAC overwrites Authorization). Removed Secrets Manager dependency from Lambda."
   },
   "cloudfront-lambda-403": {
     "id": "cloudfront-lambda-403",
     "title": "Fix CloudFront -> Lambda Function URL 403 AccessDeniedException",
     "status": "done",
-    "notes": "Added aws_lambda_permission.cloudfront_invoke_function (lambda:InvokeFunction) alongside existing lambda:InvokeFunctionUrl. Corrected function_url_auth_type to NONE to match actual Function URL auth mode."
+    "notes": "Added aws_lambda_permission.cloudfront_invoke_function (lambda:InvokeFunction) alongside existing lambda:InvokeFunctionUrl."
   }
 }

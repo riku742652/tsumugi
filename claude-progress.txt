@@ -82,7 +82,7 @@ Environment: No new dependencies
 
 Session: 2026-04-19
 Completed: cloudfront-lambda-403 fix
-  - infra/modules/cloudfront/main.tf: added aws_lambda_permission.cloudfront_invoke_function (action=lambda:InvokeFunction, principal=cloudfront.amazonaws.com, source_arn=distribution ARN) alongside existing InvokeFunctionUrl permission; corrected function_url_auth_type on existing permission to NONE (was incorrectly set to AWS_IAM in working tree)
+  - infra/modules/cloudfront/main.tf: added aws_lambda_permission.cloudfront_invoke_function (action=lambda:InvokeFunction, principal=cloudfront.amazonaws.com, source_arn=distribution ARN) alongside existing InvokeFunctionUrl permission
   - features.json: added cloudfront-lambda-403 entry with status done
   Root cause: Lambda resource policy only granted lambda:InvokeFunctionUrl; post-Oct 2025 AWS behavior requires both lambda:InvokeFunctionUrl AND lambda:InvokeFunction for CloudFront Function URL invocation with authorization_type=NONE
 In Progress: (none)
