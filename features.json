@@ -48,5 +48,11 @@
     "title": "Fix upload 500 — DynamoDB float TypeError",
     "status": "done",
     "notes": "boto3 DynamoDB rejects Python float. Used Decimal(str(v)) explicit conversion in upload router. Removed json round-trip approach per review feedback."
+  },
+  "bug-high": {
+    "id": "bug-high",
+    "title": "Fix BUG-01 (Cognito token expiry) and BUG-02 (Shift-JIS CSV mojibake)",
+    "status": "done",
+    "notes": "BUG-01: forceRefresh:true in getIdToken(); 401 handler in api.ts calls signOut()+redirect. BUG-02: detectEncoding() helper probes first 4KB with TextDecoder fatal=true; passes encoding to PapaParse."
   }
 }
