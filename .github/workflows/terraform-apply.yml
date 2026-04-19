@@ -111,3 +111,21 @@ jobs:
           terragrunt run-all apply --terragrunt-non-interactive -auto-approve \
             --terragrunt-include-dir lambda \
             --terragrunt-include-dir cloudfront
+
+      # Force Lambda to pull the newly pushed :latest image.
+      # Terraform tracks image_uri as a string — pushing a new image with the
+      # same :latest tag is invisible to Terraform, so we must update explicitly.
+      - name: Force Lambda function code update
+        if: inputs.module == 'all'
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ env.ECR_REPOSITORY }}-api" \
+            --image-uri "$REGISTRY/$ECR_REPOSITORY:latest" \
+            --region "${{ env.AWS_REGION }}" \
+            --query 'FunctionArn' \
+            --output text
+          aws lambda wait function-updated \
+            --function-name "${{ env.ECR_REPOSITORY }}-api" \
+            --region "${{ env.AWS_REGION }}"
