@@ -158,7 +158,6 @@ resource "aws_lambda_permission" "allow_cloudfront_invoke_function_url" {
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = var.lambda_function_name
   principal              = "*"
-  source_arn             = aws_cloudfront_distribution.main.arn
   function_url_auth_type = "NONE"
 }
 
