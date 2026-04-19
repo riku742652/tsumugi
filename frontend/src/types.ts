@@ -21,7 +21,6 @@ export interface ZaimRow {
 
 // DB に保存する形式（フロント↔バックエンド共通）
 export interface Transaction {
-  userId: string;
   txId: string; // {date}#{uuid}
   date: string;
   type: TransactionType;

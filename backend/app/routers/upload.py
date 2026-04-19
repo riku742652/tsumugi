@@ -34,9 +34,11 @@ async def upload_transactions(
         if tx.txId in seen:
             continue
         seen.add(tx.txId)
+        tx_dict = tx.model_dump()
+        tx_dict["userId"] = user_id
         items.append({
             k: (Decimal(str(v)) if isinstance(v, float) else v)
-            for k, v in {**tx.model_dump(), "userId": user_id}.items()
+            for k, v in tx_dict.items()
         })
 
     with table.batch_writer() as batch:
