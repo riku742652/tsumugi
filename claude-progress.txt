@@ -1,3 +1,16 @@
+Session: 2026-04-19
+Completed: Lambda 403 修正 (fix/bug-medium -> main, PR #32)
+  - infra/modules/lambda/main.tf: authorization_type NONE -> AWS_IAM
+  - infra/modules/cloudfront/main.tf: function_url_auth_type NONE -> AWS_IAM, lambda:InvokeFunction 権限追加 (ソース drift 修正)
+  - GitHub Actions (main ブランチ) で lambda -> cloudfront の順に apply 完了
+  - 本番確認: d11tzwdbun5b5c.cloudfront.net/api/transactions が HTTP 422 を返し Lambda まで到達を確認
+In Progress: (none)
+Blocked: (none)
+Next: features.json に bug-lambda-403-iam を追加して確認済みとする
+Environment: main ブランチに変更がマージ済み
+
+---
+
 Session: 2026-04-12
 Completed: Initial harness engineering setup (CLAUDE.md, .github/copilot-instructions.md, init.sh, features.json)
 In Progress: (none)

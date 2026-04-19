@@ -124,11 +124,11 @@ resource "aws_lambda_function" "api" {
   }
 }
 
-# Function URL uses AWS_IAM so CloudFront OAC SigV4 is validated by Lambda.
-# CORS is handled by FastAPI CORSMiddleware; AWS rejects a cors block with AWS_IAM.
+# Function URL auth stays NONE because CloudFront OAC + AWS_IAM causes
+# InvalidSignatureException on some POST requests with request bodies.
 resource "aws_lambda_function_url" "api" {
   function_name      = aws_lambda_function.api.function_name
-  authorization_type = "AWS_IAM"
+  authorization_type = "NONE"
 }
 
 output "function_url" {
