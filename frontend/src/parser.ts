@@ -10,7 +10,7 @@ async function detectEncoding(file: File): Promise<string> {
   }
 
   try {
-    new TextDecoder('utf-8', { fatal: true }).decode(probe);
+    new TextDecoder('utf-8', { fatal: true }).decode(probe, { stream: true });
     return 'UTF-8';
   } catch {
     return 'Shift-JIS';

@@ -5,8 +5,11 @@ const API_BASE = '/api/transactions';
 
 async function handleUnauthorized(res: Response, context: string): Promise<never> {
   if (res.status === 401) {
-    await signOut();
-    window.location.href = '/';
+    try {
+      await signOut();
+    } finally {
+      window.location.href = '/';
+    }
   }
   throw new Error(`${context}: ${res.status}`);
 }
