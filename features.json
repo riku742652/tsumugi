@@ -37,10 +37,10 @@
     "status": "done",
     "notes": "Added aws_lambda_permission.cloudfront_invoke_function (lambda:InvokeFunction) alongside existing lambda:InvokeFunctionUrl."
   },
-  "cloudfront-lambda-aws-iam-cors": {
-    "id": "cloudfront-lambda-aws-iam-cors",
-    "title": "Fix CloudFront OAC + Lambda AWS_IAM authorization and CORS",
+  "cloudfront-lambda-public-access": {
+    "id": "cloudfront-lambda-public-access",
+    "title": "Fix CloudFront -> Lambda Function URL 403 (public access)",
     "status": "done",
-    "notes": "Migrated authorization_type to AWS_IAM so Lambda verifies OAC SigV4 signature and evaluates CloudFront-scoped resource policy. Validated: endpoint returns HTTP 422 (FastAPI JWT check) instead of 403 AccessDeniedException."
+    "notes": "authorization_type=NONE + lambda:InvokeFunctionUrl + lambda:InvokeFunction (both) for principal=* required. AWS account requires both actions for public Function URL access. GET returns 422, POST returns 401 (FastAPI JWT validation reached). CloudFront Function URL was recreated during debugging; terraform apply updated origin URL automatically."
   }
 }
