@@ -42,5 +42,11 @@
     "title": "Fix CloudFront -> Lambda Function URL 403 (public access)",
     "status": "done",
     "notes": "authorization_type=NONE + lambda:InvokeFunctionUrl + lambda:InvokeFunction (both) for principal=* required. AWS account requires both actions for public Function URL access. GET returns 422, POST returns 401 (FastAPI JWT validation reached). CloudFront Function URL was recreated during debugging; terraform apply updated origin URL automatically."
+  },
+  "upload-decimal": {
+    "id": "upload-decimal",
+    "title": "Fix upload 500 — DynamoDB float TypeError",
+    "status": "done",
+    "notes": "boto3 DynamoDB rejects Python float. Used Decimal(str(v)) explicit conversion in upload router. Removed json round-trip approach per review feedback."
   }
 }
