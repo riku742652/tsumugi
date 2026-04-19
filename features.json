@@ -66,5 +66,11 @@
     "title": "Fix Lambda 403 AccessDeniedException — align Function URL AuthType to AWS_IAM",
     "status": "done",
     "notes": "Root cause: CloudFront OAC signing_behavior=always with Function URL authorization_type=NONE caused 403. Fix: authorization_type=AWS_IAM on Function URL + function_url_auth_type=AWS_IAM on CloudFront permission. Applied via GitHub Actions (main) PR #32. Confirmed: /api/transactions returns HTTP 422 (FastAPI reached)."
+  },
+  "chart-controller": {
+    "id": "chart-controller",
+    "title": "Fix Chart.js controller registration error",
+    "status": "done",
+    "notes": "Registered BarController/DoughnutController/LineController in frontend/src/charts.ts to resolve runtime error 'bar is not a registered controller' and restore chart rendering."
   }
 }

@@ -1,4 +1,18 @@
 Session: 2026-04-19
+Completed: chart-controller fix
+  - frontend/src/charts.ts: added BarController, DoughnutController, LineController imports and Chart.register() entries
+  - docs/research-chart-controller.md: documented root cause and alternatives
+  - docs/plan-chart-controller.md: implementation plan and validation steps
+  - features.json: added chart-controller feature with status done
+  - Validation: frontend `npm run build` passed; backend `pytest -q` reports no tests collected (exit code 5)
+In Progress: (none)
+Blocked: (none)
+Next: create feature/chart-controller branch, open PR, verify no reviewer concerns, merge to main
+Environment: local build artifacts and terragrunt caches exist but excluded from commit scope
+
+---
+
+Session: 2026-04-19
 Completed: Lambda 403 修正 (fix/bug-medium -> main, PR #32)
   - infra/modules/lambda/main.tf: authorization_type NONE -> AWS_IAM
   - infra/modules/cloudfront/main.tf: function_url_auth_type NONE -> AWS_IAM, lambda:InvokeFunction 権限追加 (ソース drift 修正)
