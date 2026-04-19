@@ -166,7 +166,6 @@ resource "aws_lambda_permission" "allow_cloudfront_invoke_function" {
   action        = "lambda:InvokeFunction"
   function_name = var.lambda_function_name
   principal     = "*"
-  invoked_via_function_url = true
 }
 
 output "distribution_id" {
