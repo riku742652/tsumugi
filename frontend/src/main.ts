@@ -160,7 +160,7 @@ async function loadAndRender(): Promise<void> {
     const to = toFilter.value
       ? (() => {
           const [y, m] = toFilter.value.split('-').map(Number);
-          const lastDay = new Date(y, m, 0).getDate(); // day 0 of month m+1 = last day of month m
+          const lastDay = new Date(y, m, 0).getDate(); // m is 1-based (1–12); passing it as a 0-based month index with day=0 gives the last day of the selected month
           return `${toFilter.value}-${String(lastDay).padStart(2, '0')}`;
         })()
       : undefined;
