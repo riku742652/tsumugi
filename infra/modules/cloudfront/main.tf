@@ -159,7 +159,15 @@ resource "aws_lambda_permission" "allow_cloudfront_invoke_function_url" {
   function_name          = var.lambda_function_name
   principal              = "cloudfront.amazonaws.com"
   source_arn             = aws_cloudfront_distribution.main.arn
-  function_url_auth_type = "NONE"
+  function_url_auth_type = "AWS_IAM"
+}
+
+resource "aws_lambda_permission" "allow_cloudfront_invoke_function" {
+  statement_id  = "AllowCloudfrontInvokeFunction"
+  action        = "lambda:InvokeFunction"
+  function_name = var.lambda_function_name
+  principal     = "cloudfront.amazonaws.com"
+  source_arn    = aws_cloudfront_distribution.main.arn
 }
 
 output "distribution_id" {
