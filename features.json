@@ -24,5 +24,17 @@
     "title": "Frontend deploy GitHub Actions workflow",
     "status": "done",
     "notes": "New .github/workflows/frontend-deploy.yml — OIDC auth, Node 20 + npm cache, Vite build with Cognito secrets, S3 sync + CloudFront invalidation"
+  },
+  "cloudfront-oac-iam": {
+    "id": "cloudfront-oac-iam",
+    "title": "CloudFront OAC + Lambda migration",
+    "status": "done",
+    "notes": "Replaced X-Origin-Secret shared secret with CloudFront OAC SigV4 signing. Lambda Function URL: authorization_type=NONE (AWS_IAM deferred). JWT moved to X-Authorization header (OAC overwrites Authorization). Removed Secrets Manager dependency from Lambda."
+  },
+  "cloudfront-lambda-403": {
+    "id": "cloudfront-lambda-403",
+    "title": "Fix CloudFront -> Lambda Function URL 403 AccessDeniedException",
+    "status": "done",
+    "notes": "Added aws_lambda_permission.cloudfront_invoke_function (lambda:InvokeFunction) alongside existing lambda:InvokeFunctionUrl."
   }
 }
